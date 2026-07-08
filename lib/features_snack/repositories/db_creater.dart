@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/database_factory_config.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migrations.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DbCreater {
@@ -22,45 +23,29 @@ class DbCreater {
     configureDatabaseFactory();
 
     final databasePath = await getDatabasesPath();
-
     final path = join(databasePath, "snackautomat.db");
 
     return await openDatabase(
       path,
-      version: 1,
+      version: currentDatabaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute("""
-      CREATE TABLE product(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        price_cents INTEGER NOT NULL,
-        slot_number INTEGER NOT NULL,
-        stock_quantity INTEGER NOT NULL
-      );
-    """);
+    await runMigrations(
+      db,
+      fromVersion: 0,
+      toVersion: version
+    );
+  }
 
-    await db.execute("""
-      CREATE TABLE coin_inventory(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        denomination_cents INTEGER NOT NULL UNIQUE,
-        quantity INTEGER NOT NULL
-      );
-    """);
-
-    await db.execute("""
-      CREATE TABLE transactions(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        amount_paid_cents INTEGER NOT NULL,
-        change_given_cents INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(product_id) REFERENCES product(id)
-      );
-    """);
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    await runMigrations(
+      db,
+      fromVersion: oldVersion,
+      toVersion: newVersion
+    );
   }
 }
