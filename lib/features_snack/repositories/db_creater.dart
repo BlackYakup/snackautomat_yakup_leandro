@@ -1,4 +1,5 @@
 import 'package:path/path.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/database_factory_config.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DbCreater {
@@ -18,6 +19,8 @@ class DbCreater {
   }
 
   Future<Database> _initDatabase() async {
+    configureDatabaseFactory();
+
     final databasePath = await getDatabasesPath();
 
     final path = join(databasePath, "snackautomat.db");
