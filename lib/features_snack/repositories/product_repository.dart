@@ -48,24 +48,24 @@ class ProductRepository {
     final rowLabel = product.rowLabel.toUpperCase();
 
     if (!['A', 'B', 'C', 'D', 'E', 'F'].contains(rowLabel)) {
-      throw ArgumentError('rowLabel muss A, B, C, D, E, F sein.')
+      throw ArgumentError('rowLabel muss A, B, C, D, E, F sein.');
     }
 
     if (product.columnNumber < 1 || product.columnNumber > 10) {
-      throw ArgumentError('columnNumber muss zwischen 1 und 10 sein.')
+      throw ArgumentError('columnNumber muss zwischen 1 und 10 sein.');
     }
 
     if (product.slotWidth != 1 && product.slotWidth != 2) {
-      throw ArgumentError('slotWidth muss 1 oder 2 sein.')
+      throw ArgumentError('slotWidth muss 1 oder 2 sein.');
     }
 
     final endColumn = product.columnNumber + product.slotWidth - 1;
 
     if (endColumn > 10) {
-      throw ArgumentError('Das Produkt passt nicht in diese Reihe.')
+      throw ArgumentError('Das Produkt passt nicht in diese Reihe.');
     }
     if (!isCategoryAllowedInRow(product.category, rowLabel)) {
-      throw ArgumentError('Diese Kategorie ist in dieser Reihe nicht erlaubt.')
+      throw ArgumentError('Diese Kategorie ist in dieser Reihe nicht erlaubt.');
     }
   }
 
@@ -85,9 +85,11 @@ class ProductRepository {
       startColumn
     ];
 
-    if (product.id != null) {
+    final productId = product.id;
+
+    if (productId != null) {
       where += " AND id != ?";
-      whereArgs.add(product.id);
+      whereArgs.add(productId);
     }
 
     final rows = await txn.query(

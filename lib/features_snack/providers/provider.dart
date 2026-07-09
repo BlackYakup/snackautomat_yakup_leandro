@@ -10,7 +10,7 @@ final databaseProvider = FutureProvider<Database>((ref) {
 
 final productRepositoryProvider = FutureProvider<ProductRepository>((ref) async {
   final db = await ref.watch(databaseProvider.future);
-  return ProductRepository(db)
+  return ProductRepository(db);
 });
 
 final productListProvider = FutureProvider<List<Product>>((ref) async {
@@ -18,7 +18,7 @@ final productListProvider = FutureProvider<List<Product>>((ref) async {
   return repository.getProducts();
 });
 
-final vendingSessionProvider = NotifierProvider<VendingSessionNotifierm VendingSessionState>(VendingSessionNotifier.new);
+final vendingSessionProvider = NotifierProvider<VendingSessionNotifier, VendingSessionState>(VendingSessionNotifier.new);
 
 class VendingSessionState {
   const VendingSessionState({
@@ -27,7 +27,7 @@ class VendingSessionState {
   });
 
   final int insertedCents;
-  final Product? selectedProducted;
+  final Product? selectedProduct;
 
   VendingSessionState copyWith({
     int? insertedCents,
