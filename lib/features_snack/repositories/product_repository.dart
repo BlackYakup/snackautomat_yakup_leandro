@@ -44,6 +44,15 @@ class ProductRepository {
     });
   }
 
+  Future<void> updateStockQuantity({required int productId, required int stockQuantity}) async {
+    await db.update(
+      'product',
+      {'stock_quantity': stockQuantity},
+      where: 'id = ?',
+      whereArgs: [productId]
+    );
+  }
+
   void _validateProductPlacement(Product product) {
     final rowLabel = product.rowLabel.toUpperCase();
 
