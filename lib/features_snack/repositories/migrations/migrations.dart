@@ -12,14 +12,10 @@ final List<Migration> allMigrations = <Migration>[
 
 int get currentDatabaseVersion => allMigrations.last.version;
 
-Future<void> runMigrations(
-  Database db, {
-    required int fromVersion,
-    required int toVersion
-  }) async {
-    for (final migration in allMigrations) {
-      if (migration.version > fromVersion && migration.version <= toVersion) {
-        await migration.up(db);
-      }
+Future<void> runMigrations(Database db, {required int fromVersion, required int toVersion}) async {
+  for (final migration in allMigrations) {
+    if (migration.version > fromVersion && migration.version <= toVersion) {
+      await migration.up(db);
     }
   }
+}

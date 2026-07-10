@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/screens/admin_screen.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_screen.dart';
 
 class VendingMachineScreen extends ConsumerWidget {
   const VendingMachineScreen({super.key});
