@@ -1,0 +1,155 @@
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_category.dart';
+import 'package:sqflite/sqflite.dart';
+
+class ProductRepository {
+  const ProductRepository(this.db);
+
+  final Database db;
+
+  Future<List<Product>> getProducts() async {
+    final rows = await db.query(
+      'product',
+      orderBy: 'row_label ASC, column_number ASC',
+    );
+
+    return rows
+        .map((row) => Product.fromJson(Map<String, dynamic>.from(row)))
+        .toList();
+  }
+
+  Future<void> saveProductAtSlot(Product product) async {
+    _validateProductPlacement(product);
+
+    await db.transaction((txn) async {
+      final hasOverlap = await _hasOverlappingProduct(txn, product);
+
+      if (hasOverlap) {
+        throw StateError('Slot ist bereits belegt.');
+      }
+
+      final values = Map<String, Object?>.from(product.toJson())
+        ..remove('id');
+
+      values['row_label'] = product.rowLabel.toUpperCase();
+      values['image_path'] = product.imagePath;
+      values['model_path'] = product.modelPath;
+      values['model_part'] = product.modelPart;
+      values['icon_key'] = product.iconKey;
+
+      if (product.id == null) {
+        await txn.insert('product', values);
+      } else {
+        var updated = await txn.update(
+          'product',
+          values,
+          where: 'id = ?',
+          whereArgs: [product.id],
+        );
+
+        if (updated == 0) {
+          updated = await txn.update(
+            'product',
+            values,
+            where: 'row_label = ? AND column_number = ?',
+            whereArgs: [
+              product.rowLabel.toUpperCase(),
+              product.columnNumber,
+            ],
+          );
+        }
+
+        if (updated == 0) {
+          await txn.insert('product', values);
+        }
+      }
+    });
+  }
+
+  Future<void> deleteProduct(int productId) async {
+    await db.delete(
+      'product',
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
+
+  Future<void> updateStockQuantity({
+    required int productId,
+    required int stockQuantity,
+  }) async {
+    await db.update(
+      'product',
+      {'stock_quantity': stockQuantity},
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
+
+  void _validateProductPlacement(Product product) {
+    final rowLabel = product.rowLabel.toUpperCase();
+
+    if (!['A', 'B', 'C', 'D', 'E', 'F'].contains(rowLabel)) {
+      throw ArgumentError('rowLabel muss A, B, C, D, E, F sein.');
+    }
+
+    if (product.columnNumber < 1 || product.columnNumber > 10) {
+      throw ArgumentError('columnNumber muss zwischen 1 und 10 sein.');
+    }
+
+    if (product.slotWidth != 1 && product.slotWidth != 2) {
+      throw ArgumentError('slotWidth muss 1 oder 2 sein.');
+    }
+
+    if (product.maxCapacity < 1) {
+      throw ArgumentError('maxCapacity muss mindestens 1 sein.');
+    }
+
+    if (product.stockQuantity < 0 || product.stockQuantity > product.maxCapacity) {
+      throw ArgumentError('Bestand muss zwischen 0 und maxCapacity liegen.');
+    }
+
+    final endColumn = product.columnNumber + product.slotWidth - 1;
+
+    if (endColumn > 10) {
+      throw ArgumentError('Das Produkt passt nicht in diese Reihe.');
+    }
+
+    if (!isCategoryAllowedInRow(product.category, rowLabel)) {
+      throw ArgumentError('Diese Kategorie ist in dieser Reihe nicht erlaubt.');
+    }
+  }
+
+  Future<bool> _hasOverlappingProduct(Transaction txn, Product product) async {
+    final startColumn = product.columnNumber;
+    final endColumn = product.columnNumber + product.slotWidth - 1;
+
+    var where = """
+      row_label = ?
+      AND column_number <= ?
+      AND (column_number + slot_width -1) >= ?
+    """;
+
+    final whereArgs = <Object>[
+      product.rowLabel.toUpperCase(),
+      endColumn,
+      startColumn,
+    ];
+
+    final productId = product.id;
+
+    if (productId != null) {
+      where += ' AND id != ?';
+      whereArgs.add(productId);
+    }
+
+    final rows = await txn.query(
+      'product',
+      where: where,
+      whereArgs: whereArgs,
+      limit: 1,
+    );
+
+    return rows.isNotEmpty;
+  }
+}

@@ -1,0 +1,56 @@
+name: power3d
+# publish_to: none # Removed to allow publishing
+description: "A powerful, industry-level 3D model viewer for Flutter using Babylon.js. Supports advanced controls, lighting, and object selection."
+homepage: https://github.com/rashbip/power_3d
+repository: https://github.com/rashbip/power_3d
+issue_tracker: https://github.com/rashbip/power_3d/issues
+topics:
+  - three-d
+  - three-d-viewer
+  - babylonjs
+  - model-viewer
+  - graphics
+version: 2.3.1
+environment:
+  sdk: ^3.10.8 
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_inappwebview: ^6.1.5
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  meta: ^1.11.0
+  archive: ^4.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/power3d_assets.zip
+
+screenshots:
+  - description: "Main 3D model viewer with lighting and materials"
+    path: doc/screenshots/home1.png
+  - description: "Advanced lighting controls (hemispheric, directional, point)"
+    path: doc/screenshots/lighting.png
+  - description: "Material and shading override system"
+    path: doc/screenshots/materials_and_shaiding.png
+  - description: "3D bounding boxes for selection feedback"
+    path: doc/screenshots/bounding_box.png
+  - description: "Scene hierarchy and mesh tree"
+    path: doc/screenshots/get_hiererchy.png
+  - description: "Interactive point-of-interest annotations"
+    path: doc/screenshots/super_annotation.png
+  - description: "Master skeletal animation system"
+    path: doc/screenshots/master_animation.png
+  - description: "Texture management and extraction"
+    path: doc/screenshots/texures.png
+  - description: "Metadata extraction from GLTF extras"
+    path: doc/screenshots/metadata.png
+  - description: "Part selection and highlighting"
+    path: doc/screenshots/select_part.png
