@@ -1,12 +1,20 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/constants/vending_coin_config.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_category.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/coin_repository.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/db_creater.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/product_repository.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/transaction_repository.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/local_file_cache.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/product_asset_storage.dart';
 import 'package:sqflite/sqflite.dart';
 
-const coinDenominationsCents = [5, 10, 20, 50, 100, 200];
+export 'package:snackautomat_yakup_leandro/features_snack/constants/vending_coin_config.dart'
+    show coinCassetteCapacity, coinDenominationsCents, formatCents;
 
 final databaseProvider = FutureProvider<Database>((ref) {
   return DbCreater.instance.database;
@@ -32,24 +40,171 @@ class ProductController extends AsyncNotifier<List<Product>> {
   Future<List<Product>> build() async {
     try {
       final repository = await ref.watch(productRepositoryProvider.future);
-      final products = await repository.getProducts();
+      var products = await repository.getProducts();
+
+      if (products.isEmpty) {
+        await _seedDemoProducts(repository);
+        products = await repository.getProducts();
+      }
 
       if (products.isNotEmpty) {
         return products;
       }
-    } catch (_) {
-      // Temporär für UI-Test: Falls DB leer/noch nicht bereit ist.
+    } catch (error) {
+      debugPrint('ProductController: Laden fehlgeschlagen: $error');
     }
 
     return _demoProducts;
   }
 
+  Future<void> _seedDemoProducts(ProductRepository repository) async {
+    for (final demo in _demoProducts) {
+      try {
+        await repository.saveProductAtSlot(
+          demo.copyWith(
+            id: null,
+            imagePath: null,
+            modelPath: null,
+            modelPart: null,
+          ),
+        );
+      } catch (error) {
+        debugPrint('ProductController: Demo-Produkt seed fehlgeschlagen: $error');
+      }
+    }
+  }
+
   Future<void> increaseStock(Product product) async {
+    final products = state.value ?? const <Product>[];
+    final index = _findProductIndex(products, product);
+
+    if (index == -1) {
+      return;
+    }
+
+    final current = products[index];
+
+    if (current.stockQuantity >= current.maxCapacity) {
+      return;
+    }
+
     await _changeStock(product, 1);
+  }
+
+  Future<void> increaseStockBy(Product product, int amount) async {
+    if (amount <= 0) {
+      return;
+    }
+
+    final products = state.value ?? const <Product>[];
+    final index = _findProductIndex(products, product);
+
+    if (index == -1) {
+      return;
+    }
+
+    final current = products[index];
+    final targetStock = (current.stockQuantity + amount).clamp(0, current.maxCapacity);
+    final difference = targetStock - current.stockQuantity;
+
+    if (difference <= 0) {
+      return;
+    }
+
+    await _changeStock(product, difference);
+  }
+
+  Future<void> refillToMax(Product product) async {
+    final products = state.value ?? const <Product>[];
+    final index = _findProductIndex(products, product);
+
+    if (index == -1) {
+      return;
+    }
+
+    final current = products[index];
+
+    if (current.stockQuantity >= current.maxCapacity) {
+      return;
+    }
+
+    await _setStock(product, current.maxCapacity);
+  }
+
+  Future<void> setStockQuantity(Product product, int stockQuantity) async {
+    final products = state.value ?? const <Product>[];
+    final index = _findProductIndex(products, product);
+
+    if (index == -1) {
+      return;
+    }
+
+    final maxCapacity = products[index].maxCapacity;
+    final clampedStock = stockQuantity.clamp(0, maxCapacity);
+
+    await _setStock(product, clampedStock);
   }
 
   Future<void> decreaseStockForAdmin(Product product) async {
     await _changeStock(product, -1);
+  }
+
+  Future<void> saveProduct(Product product) async {
+    try {
+      final repository = await ref.read(productRepositoryProvider.future);
+      await repository.saveProductAtSlot(product);
+      LocalFileCache.invalidate(product.imagePath);
+      LocalFileCache.invalidate(product.modelPath);
+      await reloadProducts();
+    } catch (error) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteProduct(Product product) async {
+    final productId = product.id;
+
+    if (productId == null) {
+      final products = state.value ?? const <Product>[];
+      state = AsyncData(
+        products
+            .where(
+              (entry) =>
+                  entry.rowLabel != product.rowLabel ||
+                  entry.columnNumber != product.columnNumber,
+            )
+            .toList(),
+      );
+      return;
+    }
+
+    try {
+      final repository = await ref.read(productRepositoryProvider.future);
+      await repository.deleteProduct(productId);
+      await ProductAssetStorage.deleteAssetsForProduct(product);
+      await reloadProducts();
+    } catch (error) {
+      debugPrint('ProductController: Löschen fehlgeschlagen: $error');
+      final products = state.value ?? const <Product>[];
+      state = AsyncData(products.where((entry) => entry.id != productId).toList());
+    }
+  }
+
+  Future<void> reloadProducts() async {
+    try {
+      final repository = await ref.read(productRepositoryProvider.future);
+      var products = await repository.getProducts();
+
+      if (products.isEmpty) {
+        await _seedDemoProducts(repository);
+        products = await repository.getProducts();
+      }
+
+      state = AsyncData(products.isEmpty ? _demoProducts : products);
+    } catch (error) {
+      debugPrint('ProductController: Reload fehlgeschlagen: $error');
+      state = AsyncData(state.value ?? _demoProducts);
+    }
   }
 
   Future<bool> decreaseStockAfterPurchase(Product product) async {
@@ -97,6 +252,29 @@ class ProductController extends AsyncNotifier<List<Product>> {
     await _persistStockIfPossible(updatedProduct);
   }
 
+  Future<void> _setStock(Product product, int newStock) async {
+    final products = state.value ?? const <Product>[];
+    final index = _findProductIndex(products, product);
+
+    if (index == -1) {
+      return;
+    }
+
+    if (newStock < 0 || newStock > products[index].maxCapacity) {
+      return;
+    }
+
+    final updatedProduct = products[index].copyWith(
+      stockQuantity: newStock,
+    );
+
+    final updatedProducts = [...products];
+    updatedProducts[index] = updatedProduct;
+    state = AsyncData(updatedProducts);
+
+    await _persistStockIfPossible(updatedProduct);
+  }
+
   Future<void> _persistStockIfPossible(Product product) async {
     final productId = product.id;
 
@@ -111,8 +289,8 @@ class ProductController extends AsyncNotifier<List<Product>> {
         productId: productId,
         stockQuantity: product.stockQuantity,
       );
-    } catch (_) {
-      // Temporär für UI-Test: UI bleibt nutzbar, auch wenn DB-Speichern scheitert.
+    } catch (error) {
+      debugPrint('ProductController: Bestand speichern fehlgeschlagen: $error');
     }
   }
 
@@ -138,14 +316,13 @@ class VendingSessionState {
     this.outputProduct,
     this.outputChange = const <int, int>{},
     this.statusMessage = 'Bitte Produktposition eingeben.',
-    this.coinInventory = const <int, int>{
-      5: 20,
-      10: 20,
-      20: 20,
-      50: 10,
-      100: 10,
-      200: 5,
-    },
+    this.coinInventory = defaultCoinInventory,
+    this.coinSurplus = defaultCoinSurplus,
+    this.coinTargetStock = defaultCoinTargetStock,
+    this.coinDesignPaths = const <int, String?>{},
+    this.changeDispenseCount = 20,
+    this.dispenseContainerFillLevel = 1,
+    this.dispenseHistory = const <DispenseRecord>[],
   });
 
   final String currentSlotInput;
@@ -157,6 +334,37 @@ class VendingSessionState {
   final Map<int, int> outputChange;
   final String statusMessage;
   final Map<int, int> coinInventory;
+  final Map<int, int> coinSurplus;
+  final Map<int, int> coinTargetStock;
+  final Map<int, String?> coinDesignPaths;
+  final int changeDispenseCount;
+  final int dispenseContainerFillLevel;
+  final List<DispenseRecord> dispenseHistory;
+
+  int get totalCoinInventory =>
+      coinInventory.values.fold<int>(0, (sum, count) => sum + count);
+
+  int get totalCoinSurplus =>
+      coinSurplus.values.fold<int>(0, (sum, count) => sum + count);
+
+  int get totalSurplusValueCents => coinSurplus.entries.fold<int>(
+        0,
+        (sum, entry) => sum + entry.key * entry.value,
+      );
+
+  int get totalCassetteValueCents => coinInventory.entries.fold<int>(
+        0,
+        (sum, entry) => sum + entry.key * entry.value,
+      );
+
+  int get totalMachineValueCents =>
+      totalCassetteValueCents + totalSurplusValueCents;
+
+  int coinRowTotalCents(int denominationCents) {
+    final ist = coinInventory[denominationCents] ?? 0;
+    final surplus = coinSurplus[denominationCents] ?? 0;
+    return denominationCents * (ist + surplus);
+  }
 
   String? get outputProductName => outputProduct?.name;
 
@@ -195,6 +403,12 @@ class VendingSessionState {
     Map<int, int>? outputChange,
     String? statusMessage,
     Map<int, int>? coinInventory,
+    Map<int, int>? coinSurplus,
+    Map<int, int>? coinTargetStock,
+    Map<int, String?>? coinDesignPaths,
+    int? changeDispenseCount,
+    int? dispenseContainerFillLevel,
+    List<DispenseRecord>? dispenseHistory,
   }) {
     return VendingSessionState(
       currentSlotInput: currentSlotInput ?? this.currentSlotInput,
@@ -211,20 +425,89 @@ class VendingSessionState {
       outputChange: outputChange ?? this.outputChange,
       statusMessage: statusMessage ?? this.statusMessage,
       coinInventory: coinInventory ?? this.coinInventory,
+      coinSurplus: coinSurplus ?? this.coinSurplus,
+      coinTargetStock: coinTargetStock ?? this.coinTargetStock,
+      coinDesignPaths: coinDesignPaths ?? this.coinDesignPaths,
+      changeDispenseCount:
+          changeDispenseCount ?? this.changeDispenseCount,
+      dispenseContainerFillLevel:
+          dispenseContainerFillLevel ?? this.dispenseContainerFillLevel,
+      dispenseHistory: dispenseHistory ?? this.dispenseHistory,
     );
   }
 }
 
+class DispenseRecord {
+  const DispenseRecord({
+    required this.productName,
+    required this.slotCode,
+    required this.timestamp,
+  });
+
+  final String productName;
+  final String slotCode;
+  final DateTime timestamp;
+}
+
 class VendingSessionNotifier extends Notifier<VendingSessionState> {
   Timer? _slotInputTimer;
+  Timer? _coinPersistTimer;
+  var _coinStateLoaded = false;
 
   @override
   VendingSessionState build() {
     ref.onDispose(() {
       _slotInputTimer?.cancel();
+      _coinPersistTimer?.cancel();
     });
 
+    Future.microtask(_loadPersistedCoinState);
+
     return const VendingSessionState();
+  }
+
+  Future<void> _loadPersistedCoinState() async {
+    if (_coinStateLoaded) {
+      return;
+    }
+
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final snapshot = await CoinRepository(db).loadSnapshot();
+      _coinStateLoaded = true;
+
+      state = state.copyWith(
+        coinInventory: snapshot.inventory,
+        coinSurplus: snapshot.surplus,
+        coinTargetStock: snapshot.targetStock,
+        coinDesignPaths: snapshot.designPaths,
+        changeDispenseCount: snapshot.changeDispenseCount,
+        dispenseContainerFillLevel: snapshot.dispenseContainerFillLevel,
+      );
+    } catch (error) {
+      debugPrint('VendingSession: Münzdaten laden fehlgeschlagen: $error');
+    }
+  }
+
+  void _scheduleCoinPersist() {
+    _coinPersistTimer?.cancel();
+    _coinPersistTimer = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final db = await ref.read(databaseProvider.future);
+        await CoinRepository(db).saveSnapshot(
+          CoinSnapshot(
+            inventory: state.coinInventory,
+            surplus: state.coinSurplus,
+            targetStock: state.coinTargetStock,
+            designPaths: state.coinDesignPaths,
+            changeDispenseCount: state.changeDispenseCount,
+            dispenseContainerFillLevel: state.dispenseContainerFillLevel,
+          ),
+        );
+      } catch (error) {
+        debugPrint('VendingSession: Münzdaten speichern fehlgeschlagen: $error');
+      }
+    });
   }
 
   void pressSlotKey(String key) {
@@ -393,7 +676,13 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     state = VendingSessionState(
       coinInventory: state.coinInventory,
+      coinSurplus: state.coinSurplus,
+      coinTargetStock: state.coinTargetStock,
+      coinDesignPaths: state.coinDesignPaths,
+      changeDispenseCount: state.changeDispenseCount,
+      dispenseContainerFillLevel: state.dispenseContainerFillLevel,
       outputChange: state.insertedCoins,
+      dispenseHistory: state.dispenseHistory,
       statusMessage: '${formatCents(state.insertedAmountCents)} zurückgegeben.',
     );
   }
@@ -448,26 +737,206 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     }
 
     final newCoinInventory = _subtractCoinMap(availableCoins, changeCoins);
+    final slotCode =
+        state.selectedSlotCode ?? '${currentProduct.rowLabel}${currentProduct.columnNumber}';
+    final dispenseRecord = DispenseRecord(
+      productName: currentProduct.name,
+      slotCode: slotCode,
+      timestamp: DateTime.now(),
+    );
+
+    final changeCoinCount =
+        changeCoins.values.fold<int>(0, (sum, count) => sum + count);
+    final paidAmountCents = state.insertedAmountCents;
 
     state = VendingSessionState(
       coinInventory: newCoinInventory,
+      coinSurplus: state.coinSurplus,
+      coinTargetStock: state.coinTargetStock,
+      coinDesignPaths: state.coinDesignPaths,
+      changeDispenseCount: state.changeDispenseCount + changeCoinCount,
+      dispenseContainerFillLevel: state.dispenseContainerFillLevel,
       outputProduct: currentProduct,
       outputChange: changeCoins,
+      dispenseHistory: [dispenseRecord, ...state.dispenseHistory].take(20).toList(),
       statusMessage:
           '${currentProduct.name} ausgegeben. Wechselgeld: ${formatCents(changeAmount)}.',
     );
+
+    _scheduleCoinPersist();
+
+    final productId = currentProduct.id;
+    if (productId != null) {
+      try {
+        final db = await ref.read(databaseProvider.future);
+        await TransactionRepository(db).recordSale(
+          productId: productId,
+          amountPaidCents: paidAmountCents,
+          changeGivenCents: changeAmount,
+        );
+      } catch (error) {
+        debugPrint('VendingSession: Transaktion speichern fehlgeschlagen: $error');
+      }
+    }
   }
 
   void addCoinsToInventory(int denominationCents, int quantity) {
     final coinInventory = Map<int, int>.from(state.coinInventory);
-    coinInventory[denominationCents] =
-        (coinInventory[denominationCents] ?? 0) + quantity;
+    final coinSurplus = Map<int, int>.from(state.coinSurplus);
+    final current = coinInventory[denominationCents] ?? 0;
+    final next = current + quantity;
+
+    if (next > coinCassetteCapacity) {
+      final overflow = next - coinCassetteCapacity;
+      coinInventory[denominationCents] = coinCassetteCapacity;
+      coinSurplus[denominationCents] =
+          (coinSurplus[denominationCents] ?? 0) + overflow;
+    } else {
+      coinInventory[denominationCents] = next;
+    }
+
+    state = state.copyWith(
+      coinInventory: coinInventory,
+      coinSurplus: coinSurplus,
+      statusMessage:
+          '$quantity x ${formatCents(denominationCents)} aufgefüllt.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void removeCoinsFromInventory(int denominationCents, int quantity) {
+    final coinInventory = Map<int, int>.from(state.coinInventory);
+    final current = coinInventory[denominationCents] ?? 0;
+    final next = current - quantity;
+
+    if (next < 0) {
+      return;
+    }
+
+    coinInventory[denominationCents] = next;
 
     state = state.copyWith(
       coinInventory: coinInventory,
       statusMessage:
-          '$quantity x ${formatCents(denominationCents)} aufgefüllt.',
+          '$quantity x ${formatCents(denominationCents)} entnommen.',
     );
+    _scheduleCoinPersist();
+  }
+
+  void emptyCoinCassette(int denominationCents) {
+    final coinInventory = Map<int, int>.from(state.coinInventory);
+    final coinSurplus = Map<int, int>.from(state.coinSurplus);
+    final current = coinInventory[denominationCents] ?? 0;
+
+    if (current == 0) {
+      return;
+    }
+
+    coinSurplus[denominationCents] = (coinSurplus[denominationCents] ?? 0) + current;
+    coinInventory[denominationCents] = 0;
+
+    state = state.copyWith(
+      coinInventory: coinInventory,
+      coinSurplus: coinSurplus,
+      dispenseContainerFillLevel: state.dispenseContainerFillLevel + 1,
+      statusMessage:
+          'Kassette ${formatCents(denominationCents)} geleert.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void emptyAllCoinCassettes() {
+    final coinInventory = <int, int>{};
+    final coinSurplus = Map<int, int>.from(state.coinSurplus);
+
+    for (final denomination in coinDenominationsCents) {
+      final current = state.coinInventory[denomination] ?? 0;
+      coinInventory[denomination] = 0;
+      if (current > 0) {
+        coinSurplus[denomination] = (coinSurplus[denomination] ?? 0) + current;
+      }
+    }
+
+    state = state.copyWith(
+      coinInventory: coinInventory,
+      coinSurplus: coinSurplus,
+      dispenseContainerFillLevel: state.dispenseContainerFillLevel + 1,
+      statusMessage: 'Alle Geldkassetten geleert.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void setCoinDesignPath(int denominationCents, String? path) {
+    final coinDesignPaths = Map<int, String?>.from(state.coinDesignPaths);
+    coinDesignPaths[denominationCents] = path;
+
+    state = state.copyWith(
+      coinDesignPaths: coinDesignPaths,
+      statusMessage: path == null
+          ? 'Münz-Design zurückgesetzt.'
+          : 'Münz-Design für ${formatCents(denominationCents)} hochgeladen.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void setCoinTargetStock(int denominationCents, int target) {
+    if (target < 0) {
+      return;
+    }
+
+    final coinTargetStock = Map<int, int>.from(state.coinTargetStock);
+    coinTargetStock[denominationCents] = target;
+
+    state = state.copyWith(
+      coinTargetStock: coinTargetStock,
+      statusMessage:
+          'Soll-Bestand ${formatCents(denominationCents)}: $target Stk.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void skimCoinSurplus(int denominationCents) {
+    final coinSurplus = Map<int, int>.from(state.coinSurplus);
+    final skimmed = coinSurplus[denominationCents] ?? 0;
+
+    if (skimmed == 0) {
+      return;
+    }
+
+    coinSurplus[denominationCents] = 0;
+
+    state = state.copyWith(
+      coinSurplus: coinSurplus,
+      statusMessage:
+          'Abschöpfung: $skimmed x ${formatCents(denominationCents)} entnommen.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void skimAllCoinSurplus() {
+    final hadSurplus = state.totalCoinSurplus > 0;
+
+    state = state.copyWith(
+      coinSurplus: {
+        for (final denomination in coinDenominationsCents) denomination: 0,
+      },
+      dispenseContainerFillLevel: 0,
+      statusMessage: hadSurplus
+          ? 'Gesamter Überschuss abgeschöpft.'
+          : 'Kein Überschuss vorhanden.',
+    );
+    _scheduleCoinPersist();
+  }
+
+  void clearCoinSurplus() {
+    state = state.copyWith(
+      coinSurplus: {
+        for (final denomination in coinDenominationsCents) denomination: 0,
+      },
+      dispenseContainerFillLevel: 0,
+      statusMessage: 'Überschuss und Abwurfbehälter geleert.',
+    );
+    _scheduleCoinPersist();
   }
 
   void _setSlotInput(String input) {
@@ -636,92 +1105,101 @@ class _ParsedSlot {
   String get code => '$rowLabel$columnNumber';
 }
 
-String formatCents(int cents) {
-  final euros = cents ~/ 100;
-  final remainingCents = cents % 100;
-
-  return '$euros,${remainingCents.toString().padLeft(2, '0')} Euro';
-}
-
 final _demoProducts = <Product>[
   const Product(
     id: 1,
     name: 'Wasser',
     priceCents: 120,
     stockQuantity: 8,
+    maxCapacity: 10,
     category: ProductCategory.drinks,
     rowLabel: 'A',
     columnNumber: 1,
     slotWidth: 1,
+    iconKey: 'water_drop',
   ),
   const Product(
     id: 2,
     name: 'Cola',
     priceCents: 180,
     stockQuantity: 5,
+    maxCapacity: 8,
     category: ProductCategory.drinks,
     rowLabel: 'A',
     columnNumber: 2,
     slotWidth: 1,
+    iconKey: 'local_drink',
   ),
   const Product(
     id: 3,
     name: 'Eistee',
     priceCents: 160,
     stockQuantity: 4,
+    maxCapacity: 8,
     category: ProductCategory.drinks,
     rowLabel: 'B',
     columnNumber: 1,
     slotWidth: 1,
+    iconKey: 'local_drink',
   ),
   const Product(
     id: 4,
     name: 'Schokoriegel',
     priceCents: 110,
     stockQuantity: 9,
+    maxCapacity: 12,
     category: ProductCategory.snacksBars,
     rowLabel: 'C',
     columnNumber: 1,
     slotWidth: 1,
+    iconKey: 'fastfood',
   ),
   const Product(
     id: 5,
     name: 'Chips',
     priceCents: 220,
     stockQuantity: 3,
+    maxCapacity: 6,
     category: ProductCategory.chips,
     rowLabel: 'C',
     columnNumber: 4,
     slotWidth: 2,
+    iconKey: 'lunch_dining',
   ),
   const Product(
     id: 6,
     name: 'Kekse',
     priceCents: 140,
     stockQuantity: 6,
+    maxCapacity: 10,
     category: ProductCategory.sweetsCookies,
     rowLabel: 'D',
     columnNumber: 2,
     slotWidth: 1,
+    iconKey: 'cookie',
   ),
   const Product(
     id: 7,
     name: 'Mints',
     priceCents: 90,
     stockQuantity: 10,
+    maxCapacity: 15,
     category: ProductCategory.knabberMints,
     rowLabel: 'E',
     columnNumber: 3,
     slotWidth: 1,
+    iconKey: 'icecream',
   ),
   const Product(
     id: 8,
     name: 'Protein Bar',
     priceCents: 250,
     stockQuantity: 2,
+    maxCapacity: 8,
     category: ProductCategory.fitness,
     rowLabel: 'F',
     columnNumber: 1,
     slotWidth: 1,
+    iconKey: 'fitness_center',
   ),
 ];

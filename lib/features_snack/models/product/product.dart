@@ -13,13 +13,20 @@ abstract class Product with _$Product {
     int? id,
     @JsonKey(name: 'price_cents') required int priceCents,
     @JsonKey(name: 'stock_quantity') required int stockQuantity,
+    @JsonKey(name: 'max_capacity') @Default(10) int maxCapacity,
     @ProductCategoryConverter() required ProductCategory category,
     @JsonKey(name: 'row_label') required String rowLabel,
     @JsonKey(name: 'column_number') required int columnNumber,
-    @JsonKey(name: 'slot_width') required int slotWidth
+    @JsonKey(name: 'slot_width') required int slotWidth,
+    @JsonKey(name: 'image_path') String? imagePath,
+    @JsonKey(name: 'model_path') String? modelPath,
+    @JsonKey(name: 'model_part') String? modelPart,
+    @JsonKey(name: 'icon_key') String? iconKey,
   }) = _Product;
 
   bool get isSoldOut => stockQuantity <= 0;
+
+  bool get isAtMaxCapacity => stockQuantity >= maxCapacity;
 
   factory Product.fromJson(Map<String, dynamic> json) =>
     _$ProductFromJson(json);

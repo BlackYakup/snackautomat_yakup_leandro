@@ -1,4 +1,5 @@
 # Miscellaneous
+*.blend1
 *.class
 *.log
 *.pyc

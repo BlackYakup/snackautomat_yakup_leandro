@@ -10,10 +10,12 @@ class ProductRepository {
   Future<List<Product>> getProducts() async {
     final rows = await db.query(
       'product',
-      orderBy: 'row_label ASC, column_number ASC'
+      orderBy: 'row_label ASC, column_number ASC',
     );
 
-    return rows.map((row) => Product.fromJson(Map<String, dynamic>.from(row))).toList();
+    return rows
+        .map((row) => Product.fromJson(Map<String, dynamic>.from(row)))
+        .toList();
   }
 
   Future<void> saveProductAtSlot(Product product) async {
@@ -23,33 +25,64 @@ class ProductRepository {
       final hasOverlap = await _hasOverlappingProduct(txn, product);
 
       if (hasOverlap) {
-        throw StateError('Slot is already occupied.');
+        throw StateError('Slot ist bereits belegt.');
       }
 
-      final values = Map<String, Object?>.from(product.toJson())..removeWhere((key, value) => value == null);
+      final values = Map<String, Object?>.from(product.toJson())
+        ..remove('id');
 
       values['row_label'] = product.rowLabel.toUpperCase();
+      values['image_path'] = product.imagePath;
+      values['model_path'] = product.modelPath;
+      values['model_part'] = product.modelPart;
+      values['icon_key'] = product.iconKey;
 
       if (product.id == null) {
         await txn.insert('product', values);
-      }
-      else {
-        await txn.update(
+      } else {
+        var updated = await txn.update(
           'product',
           values,
           where: 'id = ?',
-          whereArgs: [product.id]
+          whereArgs: [product.id],
         );
+
+        if (updated == 0) {
+          updated = await txn.update(
+            'product',
+            values,
+            where: 'row_label = ? AND column_number = ?',
+            whereArgs: [
+              product.rowLabel.toUpperCase(),
+              product.columnNumber,
+            ],
+          );
+        }
+
+        if (updated == 0) {
+          await txn.insert('product', values);
+        }
       }
     });
   }
 
-  Future<void> updateStockQuantity({required int productId, required int stockQuantity}) async {
+  Future<void> deleteProduct(int productId) async {
+    await db.delete(
+      'product',
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+  }
+
+  Future<void> updateStockQuantity({
+    required int productId,
+    required int stockQuantity,
+  }) async {
     await db.update(
       'product',
       {'stock_quantity': stockQuantity},
       where: 'id = ?',
-      whereArgs: [productId]
+      whereArgs: [productId],
     );
   }
 
@@ -68,11 +101,20 @@ class ProductRepository {
       throw ArgumentError('slotWidth muss 1 oder 2 sein.');
     }
 
+    if (product.maxCapacity < 1) {
+      throw ArgumentError('maxCapacity muss mindestens 1 sein.');
+    }
+
+    if (product.stockQuantity < 0 || product.stockQuantity > product.maxCapacity) {
+      throw ArgumentError('Bestand muss zwischen 0 und maxCapacity liegen.');
+    }
+
     final endColumn = product.columnNumber + product.slotWidth - 1;
 
     if (endColumn > 10) {
       throw ArgumentError('Das Produkt passt nicht in diese Reihe.');
     }
+
     if (!isCategoryAllowedInRow(product.category, rowLabel)) {
       throw ArgumentError('Diese Kategorie ist in dieser Reihe nicht erlaubt.');
     }
@@ -91,13 +133,13 @@ class ProductRepository {
     final whereArgs = <Object>[
       product.rowLabel.toUpperCase(),
       endColumn,
-      startColumn
+      startColumn,
     ];
 
     final productId = product.id;
 
     if (productId != null) {
-      where += " AND id != ?";
+      where += ' AND id != ?';
       whereArgs.add(productId);
     }
 
@@ -105,7 +147,7 @@ class ProductRepository {
       'product',
       where: where,
       whereArgs: whereArgs,
-      limit: 1
+      limit: 1,
     );
 
     return rows.isNotEmpty;

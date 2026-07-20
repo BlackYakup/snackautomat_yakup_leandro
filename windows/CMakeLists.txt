@@ -10,6 +10,11 @@ set(BINARY_NAME "snackautomat_yakup_leandro")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Plugin-Header (WebView2) erzeugen harmlose MSVC-Warnungen.
+if(MSVC)
+  add_compile_options(/wd4244 /wd4458)
+endif()
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
