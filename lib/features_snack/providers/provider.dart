@@ -16,24 +16,43 @@ import 'package:sqflite/sqflite.dart';
 export 'package:snackautomat_yakup_leandro/features_snack/constants/vending_coin_config.dart'
     show coinCassetteCapacity, coinDenominationsCents, formatCents;
 
+enum VendingMachinePhase { ready, dispensing, thankYou, outOfService }
+
+const purchaseResultDisplayDuration = Duration(seconds: 2);
+const thankYouCharacterDuration = Duration(milliseconds: 45);
+const thankYouHoldDuration = Duration(seconds: 2);
+const changeDropDuration = Duration(milliseconds: 750);
+
+const thankYouMessage =
+    'Vielen Dank für Ihren Einkauf.\n'
+    'Auf Wiedersehen';
+
+final thankYouSequenceDuration = Duration(
+  milliseconds:
+      thankYouMessage.length * thankYouCharacterDuration.inMilliseconds +
+      thankYouHoldDuration.inMilliseconds,
+);
+
 final databaseProvider = FutureProvider<Database>((ref) {
   return DbCreater.instance.database;
 });
 
-final productRepositoryProvider = FutureProvider<ProductRepository>((ref) async {
+final productRepositoryProvider = FutureProvider<ProductRepository>((
+  ref,
+) async {
   final db = await ref.watch(databaseProvider.future);
   return ProductRepository(db);
 });
 
 final productControllerProvider =
     AsyncNotifierProvider<ProductController, List<Product>>(
-  ProductController.new,
-);
+      ProductController.new,
+    );
 
 final vendingSessionProvider =
     NotifierProvider<VendingSessionNotifier, VendingSessionState>(
-  VendingSessionNotifier.new,
-);
+      VendingSessionNotifier.new,
+    );
 
 class ProductController extends AsyncNotifier<List<Product>> {
   @override
@@ -69,7 +88,9 @@ class ProductController extends AsyncNotifier<List<Product>> {
           ),
         );
       } catch (error) {
-        debugPrint('ProductController: Demo-Produkt seed fehlgeschlagen: $error');
+        debugPrint(
+          'ProductController: Demo-Produkt seed fehlgeschlagen: $error',
+        );
       }
     }
   }
@@ -104,7 +125,10 @@ class ProductController extends AsyncNotifier<List<Product>> {
     }
 
     final current = products[index];
-    final targetStock = (current.stockQuantity + amount).clamp(0, current.maxCapacity);
+    final targetStock = (current.stockQuantity + amount).clamp(
+      0,
+      current.maxCapacity,
+    );
     final difference = targetStock - current.stockQuantity;
 
     if (difference <= 0) {
@@ -186,7 +210,9 @@ class ProductController extends AsyncNotifier<List<Product>> {
     } catch (error) {
       debugPrint('ProductController: Löschen fehlgeschlagen: $error');
       final products = state.value ?? const <Product>[];
-      state = AsyncData(products.where((entry) => entry.id != productId).toList());
+      state = AsyncData(
+        products.where((entry) => entry.id != productId).toList(),
+      );
     }
   }
 
@@ -241,9 +267,7 @@ class ProductController extends AsyncNotifier<List<Product>> {
       return;
     }
 
-    final updatedProduct = products[index].copyWith(
-      stockQuantity: newStock,
-    );
+    final updatedProduct = products[index].copyWith(stockQuantity: newStock);
 
     final updatedProducts = [...products];
     updatedProducts[index] = updatedProduct;
@@ -264,9 +288,7 @@ class ProductController extends AsyncNotifier<List<Product>> {
       return;
     }
 
-    final updatedProduct = products[index].copyWith(
-      stockQuantity: newStock,
-    );
+    final updatedProduct = products[index].copyWith(stockQuantity: newStock);
 
     final updatedProducts = [...products];
     updatedProducts[index] = updatedProduct;
@@ -308,6 +330,7 @@ class ProductController extends AsyncNotifier<List<Product>> {
 
 class VendingSessionState {
   const VendingSessionState({
+    this.phase = VendingMachinePhase.ready,
     this.currentSlotInput = '',
     this.selectedSlotCode,
     this.selectedProduct,
@@ -325,6 +348,8 @@ class VendingSessionState {
     this.dispenseHistory = const <DispenseRecord>[],
   });
 
+  final VendingMachinePhase phase;
+  bool get canAcceptCustomerInput => phase == VendingMachinePhase.ready;
   final String currentSlotInput;
   final String? selectedSlotCode;
   final Product? selectedProduct;
@@ -348,14 +373,14 @@ class VendingSessionState {
       coinSurplus.values.fold<int>(0, (sum, count) => sum + count);
 
   int get totalSurplusValueCents => coinSurplus.entries.fold<int>(
-        0,
-        (sum, entry) => sum + entry.key * entry.value,
-      );
+    0,
+    (sum, entry) => sum + entry.key * entry.value,
+  );
 
   int get totalCassetteValueCents => coinInventory.entries.fold<int>(
-        0,
-        (sum, entry) => sum + entry.key * entry.value,
-      );
+    0,
+    (sum, entry) => sum + entry.key * entry.value,
+  );
 
   int get totalMachineValueCents =>
       totalCassetteValueCents + totalSurplusValueCents;
@@ -391,6 +416,7 @@ class VendingSessionState {
   }
 
   VendingSessionState copyWith({
+    VendingMachinePhase? phase,
     String? currentSlotInput,
     String? selectedSlotCode,
     bool clearSelectedSlotCode = false,
@@ -411,25 +437,26 @@ class VendingSessionState {
     List<DispenseRecord>? dispenseHistory,
   }) {
     return VendingSessionState(
+      phase: phase ?? this.phase,
       currentSlotInput: currentSlotInput ?? this.currentSlotInput,
       selectedSlotCode: clearSelectedSlotCode
           ? null
           : selectedSlotCode ?? this.selectedSlotCode,
-      selectedProduct:
-          clearSelectedProduct ? null : selectedProduct ?? this.selectedProduct,
-      insertedAmountCents:
-          insertedAmountCents ?? this.insertedAmountCents,
+      selectedProduct: clearSelectedProduct
+          ? null
+          : selectedProduct ?? this.selectedProduct,
+      insertedAmountCents: insertedAmountCents ?? this.insertedAmountCents,
       insertedCoins: insertedCoins ?? this.insertedCoins,
-      outputProduct:
-          clearOutputProduct ? null : outputProduct ?? this.outputProduct,
+      outputProduct: clearOutputProduct
+          ? null
+          : outputProduct ?? this.outputProduct,
       outputChange: outputChange ?? this.outputChange,
       statusMessage: statusMessage ?? this.statusMessage,
       coinInventory: coinInventory ?? this.coinInventory,
       coinSurplus: coinSurplus ?? this.coinSurplus,
       coinTargetStock: coinTargetStock ?? this.coinTargetStock,
       coinDesignPaths: coinDesignPaths ?? this.coinDesignPaths,
-      changeDispenseCount:
-          changeDispenseCount ?? this.changeDispenseCount,
+      changeDispenseCount: changeDispenseCount ?? this.changeDispenseCount,
       dispenseContainerFillLevel:
           dispenseContainerFillLevel ?? this.dispenseContainerFillLevel,
       dispenseHistory: dispenseHistory ?? this.dispenseHistory,
@@ -453,12 +480,15 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   Timer? _slotInputTimer;
   Timer? _coinPersistTimer;
   var _coinStateLoaded = false;
+  Timer? _customerFlowTimer;
+  bool _autoPurchaseInProgress = false;
 
   @override
   VendingSessionState build() {
     ref.onDispose(() {
       _slotInputTimer?.cancel();
       _coinPersistTimer?.cancel();
+      _customerFlowTimer?.cancel();
     });
 
     Future.microtask(_loadPersistedCoinState);
@@ -505,12 +535,18 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
           ),
         );
       } catch (error) {
-        debugPrint('VendingSession: Münzdaten speichern fehlgeschlagen: $error');
+        debugPrint(
+          'VendingSession: Münzdaten speichern fehlgeschlagen: $error',
+        );
       }
     });
   }
 
   void pressSlotKey(String key) {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     final normalizedKey = key.toUpperCase();
 
     if (_isRowKey(normalizedKey)) {
@@ -522,9 +558,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       final currentInput = state.currentSlotInput;
 
       if (currentInput.isEmpty || !_isRowKey(currentInput[0])) {
-        state = state.copyWith(
-          statusMessage: 'Bitte zuerst A bis F eingeben.',
-        );
+        state = state.copyWith(statusMessage: 'Bitte zuerst A bis F eingeben.');
         return;
       }
 
@@ -539,12 +573,14 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return;
     }
 
-    state = state.copyWith(
-      statusMessage: 'Ungültige Taste.',
-    );
+    state = state.copyWith(statusMessage: 'Ungültige Taste.');
   }
 
   void clearSlotInput() {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     _slotInputTimer?.cancel();
 
     state = state.copyWith(
@@ -556,6 +592,10 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void backspaceSlotInput() {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     final input = state.currentSlotInput;
 
     if (input.isEmpty) {
@@ -581,12 +621,14 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void processSlotInputAfterDelay() {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     final slotCode = state.currentSlotInput.toUpperCase();
 
     if (slotCode.isEmpty) {
-      state = state.copyWith(
-        statusMessage: 'Bitte Produktposition eingeben.',
-      );
+      state = state.copyWith(statusMessage: 'Bitte Produktposition eingeben.');
       return;
     }
 
@@ -594,18 +636,23 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void selectProductBySlot(String slotCode) {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     final parsedSlot = _parseSlotCode(slotCode);
 
     if (parsedSlot == null) {
       state = state.copyWith(
+        currentSlotInput: '',
         clearSelectedSlotCode: true,
-        clearSelectedProduct: true,
-        statusMessage: 'Ungültiger Slot: $slotCode',
+        statusMessage: 'Ungültiger Slot',
       );
       return;
     }
 
-    final products = ref.read(productControllerProvider).value ?? const <Product>[];
+    final products =
+        ref.read(productControllerProvider).value ?? const <Product>[];
     final product = _findProductAtSlot(
       products: products,
       rowLabel: parsedSlot.rowLabel,
@@ -625,6 +672,10 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void selectProduct(Product product, {String? selectedSlotCode}) {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
     if (product.isSoldOut) {
       state = state.copyWith(
         selectedSlotCode:
@@ -635,7 +686,8 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return;
     }
 
-    final slotCode = selectedSlotCode ?? '${product.rowLabel}${product.columnNumber}';
+    final slotCode =
+        selectedSlotCode ?? '${product.rowLabel}${product.columnNumber}';
 
     state = state.copyWith(
       currentSlotInput: slotCode,
@@ -645,20 +697,86 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       outputChange: const <int, int>{},
       statusMessage: '${product.name} ausgewählt.',
     );
+
+    if (state.insertedAmountCents >= product.priceCents) {
+      unawaited(_tryAutoPurchase());
+    }
   }
 
-  void insertCoin(int denominationCents) {
-    final insertedCoins = Map<int, int>.from(state.insertedCoins);
-    insertedCoins[denominationCents] =
-        (insertedCoins[denominationCents] ?? 0) + 1;
+  Future<void> insertCoin(int denominationCents) async {
+    if (!_customerInputAllowed) {
+      return;
+    }
+
+    if (_autoPurchaseInProgress) {
+      return;
+    }
+
+    final product = state.selectedProduct;
+
+    if (product == null) {
+      state = state.copyWith(
+        statusMessage: 'Bitte zuerst ein Produkt auswählen.',
+      );
+      return;
+    }
+
+    if (product.isSoldOut) {
+      state = state.copyWith(
+        statusMessage: 'Das ausgewählte Produkt ist ausverkauft.',
+      );
+      return;
+    }
+
+    if (!coinDenominationsCents.contains(denominationCents)) {
+      state = state.copyWith(
+        statusMessage: 'Diese Münze wird nicht akzeptiert.',
+      );
+      return;
+    }
+
+    final updatedInsertedCoins = Map<int, int>.from(state.insertedCoins);
+    updatedInsertedCoins[denominationCents] =
+        (updatedInsertedCoins[denominationCents] ?? 0) + 1;
+    final updatedAmount = state.insertedAmountCents + denominationCents;
 
     state = state.copyWith(
-      insertedAmountCents: state.insertedAmountCents + denominationCents,
-      insertedCoins: insertedCoins,
-      clearOutputProduct: true,
-      outputChange: const <int, int>{},
-      statusMessage: '${formatCents(denominationCents)} eingeworfen.',
+      insertedAmountCents: updatedAmount,
+      insertedCoins: updatedInsertedCoins,
+      statusMessage: updatedAmount >= product.priceCents
+          ? 'Zahlung vollständig. Kauf wird verarbeitet.'
+          : 'Münze eingeworfen.',
     );
+
+    await _tryAutoPurchase();
+  }
+
+  Future<void> _tryAutoPurchase() async {
+    final product = state.selectedProduct;
+
+    if (product == null) {
+      return;
+    }
+
+    if (product.isSoldOut) {
+      return;
+    }
+
+    if (state.insertedAmountCents < product.priceCents) {
+      return;
+    }
+
+    if (_autoPurchaseInProgress) {
+      return;
+    }
+
+    _autoPurchaseInProgress = true;
+
+    try {
+      await buySelectedProduct();
+    } finally {
+      _autoPurchaseInProgress = false;
+    }
   }
 
   void cancelPurchase() {
@@ -721,35 +839,57 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     final changeCoins = _calculateChange(changeAmount, availableCoins);
 
     if (changeCoins == null) {
+      state = state.copyWith(statusMessage: 'Wechselgeld nicht möglich.');
+      return;
+    }
+
+    state = state.copyWith(
+      phase: VendingMachinePhase.dispensing,
+      statusMessage: 'Kauf wird verarbeitet.',
+    );
+
+    bool productWasUpdated;
+
+    try {
+      productWasUpdated = await ref
+          .read(productControllerProvider.notifier)
+          .decreaseStockAfterPurchase(currentProduct);
+    } catch (_) {
+      _customerFlowTimer?.cancel();
+
       state = state.copyWith(
-        statusMessage: 'Wechselgeld nicht möglich.',
+        phase: VendingMachinePhase.outOfService,
+        statusMessage: 'Technischer Fehler. Automat außer Betrieb.',
       );
       return;
     }
 
-    final productWasUpdated = await ref
-        .read(productControllerProvider.notifier)
-        .decreaseStockAfterPurchase(currentProduct);
-
     if (!productWasUpdated) {
-      state = state.copyWith(statusMessage: 'Produkt ist nicht mehr verfügbar.');
+      state = state.copyWith(
+        phase: VendingMachinePhase.ready,
+        statusMessage: 'Produkt ist nicht mehr verfügbar.',
+      );
       return;
     }
 
     final newCoinInventory = _subtractCoinMap(availableCoins, changeCoins);
     final slotCode =
-        state.selectedSlotCode ?? '${currentProduct.rowLabel}${currentProduct.columnNumber}';
+        state.selectedSlotCode ??
+        '${currentProduct.rowLabel}${currentProduct.columnNumber}';
     final dispenseRecord = DispenseRecord(
       productName: currentProduct.name,
       slotCode: slotCode,
       timestamp: DateTime.now(),
     );
 
-    final changeCoinCount =
-        changeCoins.values.fold<int>(0, (sum, count) => sum + count);
+    final changeCoinCount = changeCoins.values.fold<int>(
+      0,
+      (sum, count) => sum + count,
+    );
     final paidAmountCents = state.insertedAmountCents;
 
-    state = VendingSessionState(
+    state = state.copyWith(
+      phase: VendingMachinePhase.dispensing,
       coinInventory: newCoinInventory,
       coinSurplus: state.coinSurplus,
       coinTargetStock: state.coinTargetStock,
@@ -758,12 +898,15 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       dispenseContainerFillLevel: state.dispenseContainerFillLevel,
       outputProduct: currentProduct,
       outputChange: changeCoins,
-      dispenseHistory: [dispenseRecord, ...state.dispenseHistory].take(20).toList(),
-      statusMessage:
-          '${currentProduct.name} ausgegeben. Wechselgeld: ${formatCents(changeAmount)}.',
+      dispenseHistory: [
+        dispenseRecord,
+        ...state.dispenseHistory,
+      ].take(20).toList(),
+      statusMessage: 'Produkt wird ausgegeben.',
     );
 
     _scheduleCoinPersist();
+    _startPostPurchaseFlow();
 
     final productId = currentProduct.id;
     if (productId != null) {
@@ -775,9 +918,60 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
           changeGivenCents: changeAmount,
         );
       } catch (error) {
-        debugPrint('VendingSession: Transaktion speichern fehlgeschlagen: $error');
+        debugPrint(
+          'VendingSession: Transaktion speichern fehlgeschlagen: $error',
+        );
       }
     }
+  }
+
+  void _startPostPurchaseFlow() {
+    _customerFlowTimer?.cancel();
+
+    _customerFlowTimer = Timer(purchaseResultDisplayDuration, () {
+      if (state.phase != VendingMachinePhase.dispensing) {
+        return;
+      }
+
+      state = state.copyWith(
+        phase: VendingMachinePhase.thankYou,
+        statusMessage: 'Vielen Dank für Ihren Einkauf.',
+      );
+
+      _customerFlowTimer = Timer(
+        thankYouSequenceDuration,
+        _resetForNextCustomer,
+      );
+    });
+  }
+
+  void _resetForNextCustomer() {
+    _customerFlowTimer?.cancel();
+    _slotInputTimer?.cancel();
+
+    if (state.phase != VendingMachinePhase.thankYou) {
+      return;
+    }
+
+    state = VendingSessionState(
+      coinInventory: state.coinInventory,
+      coinSurplus: state.coinSurplus,
+      coinTargetStock: state.coinTargetStock,
+      coinDesignPaths: state.coinDesignPaths,
+      changeDispenseCount: state.changeDispenseCount,
+      dispenseContainerFillLevel: state.dispenseContainerFillLevel,
+      dispenseHistory: state.dispenseHistory,
+    );
+  }
+
+  void markOutOfService(String message) {
+    _customerFlowTimer?.cancel();
+    _slotInputTimer?.cancel();
+
+    state = state.copyWith(
+      phase: VendingMachinePhase.outOfService,
+      statusMessage: message,
+    );
   }
 
   void addCoinsToInventory(int denominationCents, int quantity) {
@@ -817,8 +1011,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     state = state.copyWith(
       coinInventory: coinInventory,
-      statusMessage:
-          '$quantity x ${formatCents(denominationCents)} entnommen.',
+      statusMessage: '$quantity x ${formatCents(denominationCents)} entnommen.',
     );
     _scheduleCoinPersist();
   }
@@ -832,15 +1025,15 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return;
     }
 
-    coinSurplus[denominationCents] = (coinSurplus[denominationCents] ?? 0) + current;
+    coinSurplus[denominationCents] =
+        (coinSurplus[denominationCents] ?? 0) + current;
     coinInventory[denominationCents] = 0;
 
     state = state.copyWith(
       coinInventory: coinInventory,
       coinSurplus: coinSurplus,
       dispenseContainerFillLevel: state.dispenseContainerFillLevel + 1,
-      statusMessage:
-          'Kassette ${formatCents(denominationCents)} geleert.',
+      statusMessage: 'Kassette ${formatCents(denominationCents)} geleert.',
     );
     _scheduleCoinPersist();
   }
@@ -939,6 +1132,8 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     _scheduleCoinPersist();
   }
 
+  bool get _customerInputAllowed => state.phase == VendingMachinePhase.ready;
+
   void _setSlotInput(String input) {
     state = state.copyWith(
       currentSlotInput: input,
@@ -988,10 +1183,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return null;
     }
 
-    return _ParsedSlot(
-      rowLabel: rowLabel,
-      columnNumber: columnNumber,
-    );
+    return _ParsedSlot(rowLabel: rowLabel, columnNumber: columnNumber);
   }
 
   Product? _findProductAtSlot({
@@ -1094,10 +1286,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 }
 
 class _ParsedSlot {
-  const _ParsedSlot({
-    required this.rowLabel,
-    required this.columnNumber,
-  });
+  const _ParsedSlot({required this.rowLabel, required this.columnNumber});
 
   final String rowLabel;
   final int columnNumber;
