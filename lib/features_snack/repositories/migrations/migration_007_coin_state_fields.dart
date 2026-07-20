@@ -16,9 +16,7 @@ class Migration007CoinStateFields extends Migration {
       );
     ''');
 
-    final columns = await db.rawQuery('PRAGMA table_info(coin_inventory)');
-    final columnNames =
-        columns.map((row) => row['name'] as String).toSet();
+    final columnNames = await getTableColumnNames(db, 'coin_inventory');
 
     if (!columnNames.contains('surplus_quantity')) {
       await db.execute('''

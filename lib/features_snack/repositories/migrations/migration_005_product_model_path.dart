@@ -9,6 +9,10 @@ class Migration005ProductModelPath extends Migration {
 
   @override
   Future<void> up(Database db) async {
-    await db.execute('ALTER TABLE product ADD COLUMN model_path TEXT;');
+    final columnNames = await getTableColumnNames(db, 'product');
+
+    if (!columnNames.contains('model_path')) {
+      await db.execute('ALTER TABLE product ADD COLUMN model_path TEXT;');
+    }
   }
 }

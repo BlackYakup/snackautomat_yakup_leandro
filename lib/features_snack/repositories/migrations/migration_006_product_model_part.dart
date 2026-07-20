@@ -9,6 +9,10 @@ class Migration006ProductModelPart extends Migration {
 
   @override
   Future<void> up(Database db) async {
-    await db.execute('ALTER TABLE product ADD COLUMN model_part TEXT;');
+    final columnNames = await getTableColumnNames(db, 'product');
+
+    if (!columnNames.contains('model_part')) {
+      await db.execute('ALTER TABLE product ADD COLUMN model_part TEXT;');
+    }
   }
 }

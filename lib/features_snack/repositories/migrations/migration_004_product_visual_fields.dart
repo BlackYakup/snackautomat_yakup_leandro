@@ -9,10 +9,20 @@ class Migration004ProductVisualFields extends Migration {
 
   @override
   Future<void> up(Database db) async {
-    await db.execute(
-      'ALTER TABLE product ADD COLUMN max_capacity INTEGER NOT NULL DEFAULT 10;',
-    );
-    await db.execute('ALTER TABLE product ADD COLUMN image_path TEXT;');
-    await db.execute('ALTER TABLE product ADD COLUMN icon_key TEXT;');
+    final columnNames = await getTableColumnNames(db, 'product');
+
+    if (!columnNames.contains('max_capacity')) {
+      await db.execute(
+        'ALTER TABLE product ADD COLUMN max_capacity INTEGER NOT NULL DEFAULT 10;',
+      );
+    }
+
+    if (!columnNames.contains('image_path')) {
+      await db.execute('ALTER TABLE product ADD COLUMN image_path TEXT;');
+    }
+
+    if (!columnNames.contains('icon_key')) {
+      await db.execute('ALTER TABLE product ADD COLUMN icon_key TEXT;');
+    }
   }
 }
