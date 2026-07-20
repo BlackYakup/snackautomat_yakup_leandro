@@ -354,6 +354,6 @@ class _DigitalDisplayState extends State<DigitalDisplay> {
       return Colors.redAccent;
     }
 
-    return Colors.greenAccent;
+    return Colors.redAccent;
   }
 }
