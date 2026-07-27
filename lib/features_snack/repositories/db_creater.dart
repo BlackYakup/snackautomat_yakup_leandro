@@ -25,6 +25,8 @@ class DbCreater {
     final databasePath = await getDatabasesPath();
     final path = join(databasePath, "snackautomat.db");
 
+    print('SQLite-Datenbank: $path');
+
     return await openDatabase(
       path,
       version: currentDatabaseVersion,

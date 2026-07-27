@@ -9,8 +9,10 @@ import 'package:snackautomat_yakup_leandro/features_snack/repositories/coin_repo
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/db_creater.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/product_repository.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/transaction_repository.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/change_calculator.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/local_file_cache.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/product_asset_storage.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/slot_code_parser.dart';
 import 'package:sqflite/sqflite.dart';
 
 export 'package:snackautomat_yakup_leandro/features_snack/constants/vending_coin_config.dart'
@@ -640,7 +642,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return;
     }
 
-    final parsedSlot = _parseSlotCode(slotCode);
+    final parsedSlot = SlotCode.tryParse(slotCode);
 
     if (parsedSlot == null) {
       state = state.copyWith(
@@ -836,7 +838,10 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       state.insertedCoins,
     );
 
-    final changeCoins = _calculateChange(changeAmount, availableCoins);
+    final changeCoins = ChangeCalculator.calculate(
+      changeCents: changeAmount,
+      inventory: availableCoins,
+    );
 
     if (changeCoins == null) {
       state = state.copyWith(statusMessage: 'Wechselgeld nicht möglich.');
@@ -1163,29 +1168,6 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     return RegExp(r'^[0-9]$').hasMatch(key);
   }
 
-  _ParsedSlot? _parseSlotCode(String slotCode) {
-    final normalizedSlotCode = slotCode.toUpperCase();
-
-    if (normalizedSlotCode.length < 2 || normalizedSlotCode.length > 3) {
-      return null;
-    }
-
-    final rowLabel = normalizedSlotCode[0];
-
-    if (!_isRowKey(rowLabel)) {
-      return null;
-    }
-
-    final columnText = normalizedSlotCode.substring(1);
-    final columnNumber = int.tryParse(columnText);
-
-    if (columnNumber == null || columnNumber < 1 || columnNumber > 10) {
-      return null;
-    }
-
-    return _ParsedSlot(rowLabel: rowLabel, columnNumber: columnNumber);
-  }
-
   Product? _findProductAtSlot({
     required List<Product> products,
     required String rowLabel,
@@ -1226,38 +1208,6 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     return selectedProduct;
   }
 
-  Map<int, int>? _calculateChange(
-    int changeAmountCents,
-    Map<int, int> availableCoins,
-  ) {
-    var remainingAmount = changeAmountCents;
-    final changeCoins = <int, int>{};
-
-    for (final denomination in coinDenominationsCents.reversed) {
-      final availableQuantity = availableCoins[denomination] ?? 0;
-
-      if (availableQuantity == 0) {
-        continue;
-      }
-
-      final neededQuantity = remainingAmount ~/ denomination;
-      final usedQuantity = neededQuantity < availableQuantity
-          ? neededQuantity
-          : availableQuantity;
-
-      if (usedQuantity > 0) {
-        changeCoins[denomination] = usedQuantity;
-        remainingAmount -= usedQuantity * denomination;
-      }
-    }
-
-    if (remainingAmount != 0) {
-      return null;
-    }
-
-    return changeCoins;
-  }
-
   Map<int, int> _addCoinMaps(
     Map<int, int> coinInventory,
     Map<int, int> insertedCoins,
@@ -1283,15 +1233,6 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     return result;
   }
-}
-
-class _ParsedSlot {
-  const _ParsedSlot({required this.rowLabel, required this.columnNumber});
-
-  final String rowLabel;
-  final int columnNumber;
-
-  String get code => '$rowLabel$columnNumber';
 }
 
 final _demoProducts = <Product>[

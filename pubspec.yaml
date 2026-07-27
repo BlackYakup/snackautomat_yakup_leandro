@@ -29,6 +29,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  fake_async: ^1.3.3
   build_runner: ^2.15.1
   freezed: ^3.2.5
   json_serializable: ^6.14.0
