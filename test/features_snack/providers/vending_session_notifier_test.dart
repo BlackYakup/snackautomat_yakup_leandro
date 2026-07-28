@@ -115,6 +115,99 @@ Future<void> _waitUntil(bool Function() condition) async {
 }
 
 void main() {
+  group('Zahlungsphase', () {
+    test('erfolgreiche Produktauswahl startet die Zahlungsphase', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      expect(harness.state.phase, VendingMachinePhase.paymentInProgress);
+      expect(harness.state.statusMessage, 'Bitte bezahlen.');
+    });
+
+    test('Slot-Tasten sind während der Zahlungsphase gesperrt', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      harness.notifier.pressSlotKey('A');
+
+      expect(harness.state.currentSlotInput, 'C4');
+      expect(harness.state.selectedSlotCode, 'C4');
+      expect(harness.state.selectedProduct?.id, harness.product.id);
+    });
+
+    test('Münzen werden während der Zahlungsphase angenommen', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      await harness.notifier.insertCoin(100);
+
+      expect(harness.state.phase, VendingMachinePhase.paymentInProgress);
+      expect(harness.state.insertedAmountCents, 100);
+      expect(harness.state.insertedCoins, {100: 1});
+    });
+
+    test('Münzen werden in der Bereitschaftsphase nicht angenommen', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+
+      await harness.notifier.insertCoin(100);
+
+      expect(harness.state.phase, VendingMachinePhase.ready);
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
+      expect(
+        harness.state.statusMessage,
+        'Bitte zuerst ein Produkt auswählen.',
+      );
+    });
+
+    test('Leeren gibt Münzen zurück und wechselt zu bereit', () async {
+      final harness = await _createHarness(priceCents: 200);
+      addTearDown(harness.dispose);
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+      await harness.notifier.insertCoin(100);
+
+      harness.notifier.clearSlotInput();
+
+      expect(harness.state.phase, VendingMachinePhase.ready);
+      expect(harness.state.outputChange, {100: 1});
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
+      expect(harness.state.selectedProduct, isNull);
+      expect(harness.state.selectedSlotCode, isNull);
+    });
+
+    test('Leeren ohne Geld wechselt ohne Münzausgabe zu bereit', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      harness.notifier.clearSlotInput();
+
+      expect(harness.state.phase, VendingMachinePhase.ready);
+      expect(harness.state.outputChange, isEmpty);
+      expect(harness.state.selectedProduct, isNull);
+      expect(harness.state.selectedSlotCode, isNull);
+    });
+
+    test('vollständige Zahlung startet die Produktausgabe', () async {
+      final harness = await _createHarness();
+      addTearDown(harness.dispose);
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      await harness.notifier.insertCoin(100);
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(10);
+
+      expect(harness.state.phase, VendingMachinePhase.dispensing);
+      expect(harness.state.outputProduct?.id, harness.product.id);
+    });
+  });
+
   group('Slot-Timeout und Leeren', () {
     test('ein einzelner Buchstabe wird nach zwei Sekunden verworfen', () async {
       final harness = await _createHarness();

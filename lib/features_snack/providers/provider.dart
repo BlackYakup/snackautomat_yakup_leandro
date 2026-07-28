@@ -18,7 +18,13 @@ import 'package:sqflite/sqflite.dart';
 export 'package:snackautomat_yakup_leandro/features_snack/constants/vending_coin_config.dart'
     show coinCassetteCapacity, coinDenominationsCents, formatCents;
 
-enum VendingMachinePhase { ready, dispensing, thankYou, outOfService }
+enum VendingMachinePhase {
+  ready,
+  paymentInProgress,
+  dispensing,
+  thankYou,
+  outOfService,
+}
 
 const purchaseResultDisplayDuration = Duration(seconds: 2);
 const thankYouCharacterDuration = Duration(milliseconds: 45);
@@ -351,7 +357,11 @@ class VendingSessionState {
   });
 
   final VendingMachinePhase phase;
-  bool get canAcceptCustomerInput => phase == VendingMachinePhase.ready;
+  bool get canUseSlotKeys => phase == VendingMachinePhase.ready;
+  bool get canClearSelection =>
+      phase == VendingMachinePhase.ready ||
+      phase == VendingMachinePhase.paymentInProgress;
+  bool get canInsertCoins => phase == VendingMachinePhase.paymentInProgress;
   final String currentSlotInput;
   final String? selectedSlotCode;
   final Product? selectedProduct;
@@ -545,7 +555,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void pressSlotKey(String key) {
-    if (!_customerInputAllowed) {
+    if (!state.canUseSlotKeys) {
       return;
     }
 
@@ -579,7 +589,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void clearSlotInput() {
-    if (!_customerInputAllowed) {
+    if (!state.canClearSelection) {
       return;
     }
 
@@ -590,6 +600,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     final hasRefund = refundedCoins.isNotEmpty;
 
     state = state.copyWith(
+      phase: VendingMachinePhase.ready,
       currentSlotInput: '',
       clearSelectedSlotCode: true,
       clearSelectedProduct: true,
@@ -604,7 +615,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void backspaceSlotInput() {
-    if (!_customerInputAllowed) {
+    if (!state.canUseSlotKeys) {
       return;
     }
 
@@ -633,7 +644,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void processSlotInputAfterDelay() {
-    if (!_customerInputAllowed) {
+    if (!state.canUseSlotKeys) {
       return;
     }
 
@@ -648,7 +659,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void selectProductBySlot(String slotCode) {
-    if (!_customerInputAllowed) {
+    if (!state.canUseSlotKeys) {
       return;
     }
 
@@ -684,7 +695,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void selectProduct(Product product, {String? selectedSlotCode}) {
-    if (!_customerInputAllowed) {
+    if (!state.canUseSlotKeys) {
       return;
     }
 
@@ -702,12 +713,13 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
         selectedSlotCode ?? '${product.rowLabel}${product.columnNumber}';
 
     state = state.copyWith(
+      phase: VendingMachinePhase.paymentInProgress,
       currentSlotInput: slotCode,
       selectedSlotCode: slotCode,
       selectedProduct: product,
       clearOutputProduct: true,
       outputChange: const <int, int>{},
-      statusMessage: '${product.name} ausgewählt.',
+      statusMessage: 'Bitte bezahlen.',
     );
 
     if (state.insertedAmountCents >= product.priceCents) {
@@ -716,7 +728,13 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   Future<void> insertCoin(int denominationCents) async {
-    if (!_customerInputAllowed) {
+    if (!state.canInsertCoins) {
+      if (state.phase == VendingMachinePhase.ready &&
+          state.selectedProduct == null) {
+        state = state.copyWith(
+          statusMessage: 'Bitte zuerst ein Produkt auswählen.',
+        );
+      }
       return;
     }
 
@@ -728,6 +746,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     if (product == null) {
       state = state.copyWith(
+        phase: VendingMachinePhase.ready,
         statusMessage: 'Bitte zuerst ein Produkt auswählen.',
       );
       return;
@@ -764,6 +783,10 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   Future<void> _tryAutoPurchase() async {
+    if (state.phase != VendingMachinePhase.paymentInProgress) {
+      return;
+    }
+
     final product = state.selectedProduct;
 
     if (product == null) {
@@ -1146,8 +1169,6 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     );
     _scheduleCoinPersist();
   }
-
-  bool get _customerInputAllowed => state.phase == VendingMachinePhase.ready;
 
   void _setSlotInput(String input) {
     state = state.copyWith(

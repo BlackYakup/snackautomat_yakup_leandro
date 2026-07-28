@@ -22,7 +22,9 @@ class VendingMachineScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Admin',
             icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () => openAdminArea(context),
+            onPressed: session.phase == VendingMachinePhase.ready
+                ? () => openAdminArea(context)
+                : null,
           ),
         ],
       ),
