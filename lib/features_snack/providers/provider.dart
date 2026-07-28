@@ -585,11 +585,21 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     _slotInputTimer?.cancel();
 
+    final refundedCoins = Map<int, int>.from(state.insertedCoins)
+      ..removeWhere((denomination, quantity) => quantity <= 0);
+    final hasRefund = refundedCoins.isNotEmpty;
+
     state = state.copyWith(
       currentSlotInput: '',
       clearSelectedSlotCode: true,
       clearSelectedProduct: true,
-      statusMessage: 'Bitte Produktposition eingeben.',
+      insertedAmountCents: 0,
+      insertedCoins: const <int, int>{},
+      clearOutputProduct: true,
+      outputChange: hasRefund ? refundedCoins : const <int, int>{},
+      statusMessage: hasRefund
+          ? 'Geld wird zurückgegeben.'
+          : 'Bitte Produktposition eingeben.',
     );
   }
 
