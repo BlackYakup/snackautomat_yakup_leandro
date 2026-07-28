@@ -131,7 +131,7 @@ void main() {
       });
     });
 
-    test('Leeren entfernt eine unvollständige Eingabe', () async {
+    test('Leeren entfernt unvollständige Eingabe ohne Münzausgabe', () async {
       final harness = await _createHarness();
       addTearDown(harness.dispose);
 
@@ -139,30 +139,107 @@ void main() {
       harness.notifier.clearSlotInput();
 
       expect(harness.state.currentSlotInput, isEmpty);
+      expect(harness.state.outputChange, isEmpty);
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
+      expect(harness.state.selectedProduct, isNull);
+      expect(harness.state.selectedSlotCode, isNull);
     });
 
-    test('Leeren entfernt Produktauswahl und Slot-Code', () async {
+    test('Leeren ohne Geld entfernt die Auswahl ohne Münzausgabe', () async {
       final harness = await _createHarness();
       addTearDown(harness.dispose);
 
       harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
       harness.notifier.clearSlotInput();
 
+      expect(harness.state.outputChange, isEmpty);
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
       expect(harness.state.selectedProduct, isNull);
       expect(harness.state.selectedSlotCode, isNull);
     });
 
-    test('Leeren behält bereits eingeworfene 100 Cent', () async {
-      final harness = await _createHarness();
+    test('Leeren gibt die exakt eingeworfene Stückelung zurück', () async {
+      final harness = await _createHarness(priceCents: 200);
       addTearDown(harness.dispose);
 
       harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
       await harness.notifier.insertCoin(100);
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(20);
+      await harness.notifier.insertCoin(10);
+
       harness.notifier.clearSlotInput();
 
+      expect(harness.state.outputChange, {100: 1, 50: 1, 20: 1, 10: 1});
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
       expect(harness.state.selectedProduct, isNull);
       expect(harness.state.selectedSlotCode, isNull);
-      expect(harness.state.insertedAmountCents, 100);
+      expect(harness.state.currentSlotInput, isEmpty);
+      expect(harness.state.statusMessage, 'Geld wird zurückgegeben.');
+    });
+
+    test('Leeren erhält mehrfach eingeworfene Stückelungen exakt', () async {
+      final harness = await _createHarness(priceCents: 200);
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(20);
+      await harness.notifier.insertCoin(20);
+      await harness.notifier.insertCoin(20);
+
+      harness.notifier.clearSlotInput();
+
+      expect(harness.state.outputChange, {50: 2, 20: 3});
+      expect(harness.state.insertedAmountCents, 0);
+      expect(harness.state.insertedCoins, isEmpty);
+    });
+
+    test('Leeren verändert den Produktbestand nicht', () async {
+      final harness = await _createHarness(priceCents: 200, stockQuantity: 3);
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      await harness.notifier.insertCoin(100);
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(20);
+      await harness.notifier.insertCoin(10);
+
+      harness.notifier.clearSlotInput();
+
+      final rows = await harness.database.query(
+        'product',
+        columns: ['stock_quantity'],
+        where: 'id = ?',
+        whereArgs: [harness.product.id],
+      );
+
+      expect(rows.single['stock_quantity'], 3);
+    });
+
+    test('Leeren speichert keine erfolgreiche Transaktion', () async {
+      final harness = await _createHarness(priceCents: 200);
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+
+      await harness.notifier.insertCoin(100);
+      await harness.notifier.insertCoin(50);
+      await harness.notifier.insertCoin(20);
+      await harness.notifier.insertCoin(10);
+
+      harness.notifier.clearSlotInput();
+
+      final transactions = await harness.database.query('transactions');
+
+      expect(transactions, isEmpty);
     });
 
     test('Leeren beendet den laufenden Slot-Timer', () async {
