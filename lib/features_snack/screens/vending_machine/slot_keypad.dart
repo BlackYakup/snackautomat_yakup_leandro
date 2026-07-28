@@ -9,10 +9,11 @@ class SlotKeypad extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(vendingSessionProvider.notifier);
-    final inputEnabled = ref.watch(
-      vendingSessionProvider.select(
-        (session) => session.canAcceptCustomerInput,
-      ),
+    final slotKeysEnabled = ref.watch(
+      vendingSessionProvider.select((session) => session.canUseSlotKeys),
+    );
+    final clearEnabled = ref.watch(
+      vendingSessionProvider.select((session) => session.canClearSelection),
     );
 
     return Column(
@@ -23,15 +24,15 @@ class SlotKeypad extends ConsumerWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _buildKeyRow(['A', 'B', 'C'], notifier, inputEnabled),
-        _buildKeyRow(['D', 'E', 'F'], notifier, inputEnabled),
-        _buildKeyRow(['1', '2', '3'], notifier, inputEnabled),
-        _buildKeyRow(['4', '5', '6'], notifier, inputEnabled),
-        _buildKeyRow(['7', '8', '9'], notifier, inputEnabled),
-        _buildKeyRow(['', '0', ''], notifier, inputEnabled),
+        _buildKeyRow(['A', 'B', 'C'], notifier, slotKeysEnabled),
+        _buildKeyRow(['D', 'E', 'F'], notifier, slotKeysEnabled),
+        _buildKeyRow(['1', '2', '3'], notifier, slotKeysEnabled),
+        _buildKeyRow(['4', '5', '6'], notifier, slotKeysEnabled),
+        _buildKeyRow(['7', '8', '9'], notifier, slotKeysEnabled),
+        _buildKeyRow(['', '0', ''], notifier, slotKeysEnabled),
         KeyButton.destructive(
           label: 'Leeren',
-          onPressed: inputEnabled ? notifier.clearSlotInput : null,
+          onPressed: clearEnabled ? notifier.clearSlotInput : null,
         ),
       ],
     );
@@ -40,7 +41,7 @@ class SlotKeypad extends ConsumerWidget {
   Widget _buildKeyRow(
     List<String> keys,
     VendingSessionNotifier notifier,
-    bool inputEnabled,
+    bool slotKeysEnabled,
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -53,7 +54,7 @@ class SlotKeypad extends ConsumerWidget {
                   ? const SizedBox(height: 40)
                   : KeyButton(
                       label: key,
-                      onPressed: inputEnabled
+                      onPressed: slotKeysEnabled
                           ? () => notifier.pressSlotKey(key)
                           : null,
                     ),

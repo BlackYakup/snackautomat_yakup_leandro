@@ -13,8 +13,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
   bool _coinWasAccepted = false;
 
   Future<void> _insertCoin(int denominationCents) async {
-    final amountBefore =
-        ref.read(vendingSessionProvider).insertedAmountCents;
+    final amountBefore = ref.read(vendingSessionProvider).insertedAmountCents;
 
     await ref
         .read(vendingSessionProvider.notifier)
@@ -24,8 +23,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
       return;
     }
 
-    final amountAfter =
-        ref.read(vendingSessionProvider).insertedAmountCents;
+    final amountAfter = ref.read(vendingSessionProvider).insertedAmountCents;
 
     if (amountAfter <= amountBefore) {
       return;
@@ -47,9 +45,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
   @override
   Widget build(BuildContext context) {
     final inputEnabled = ref.watch(
-      vendingSessionProvider.select(
-        (session) => session.canAcceptCustomerInput,
-      ),
+      vendingSessionProvider.select((session) => session.canInsertCoins),
     );
 
     return Column(
@@ -81,21 +77,15 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isHovered
-                        ? [
-                            Colors.blueGrey.shade500,
-                            Colors.blueGrey.shade800,
-                          ]
-                        : [
-                            Colors.grey.shade400,
-                            Colors.grey.shade700,
-                          ],
+                        ? [Colors.blueGrey.shade500, Colors.blueGrey.shade800]
+                        : [Colors.grey.shade400, Colors.grey.shade700],
                   ),
                   border: Border.all(
                     color: _coinWasAccepted
                         ? Colors.greenAccent
                         : isHovered
-                            ? Colors.lightBlueAccent
-                            : Colors.grey.shade900,
+                        ? Colors.lightBlueAccent
+                        : Colors.grey.shade900,
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(6),
@@ -131,10 +121,10 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
                       _coinWasAccepted
                           ? 'Münze angenommen'
                           : !inputEnabled
-                              ? 'Bitte warten'
-                              : isHovered
-                                  ? 'Loslassen'
-                                  : 'Münze hier einwerfen',
+                          ? 'Bitte warten'
+                          : isHovered
+                          ? 'Loslassen'
+                          : 'Münze hier einwerfen',
                       style: TextStyle(
                         color: _coinWasAccepted
                             ? Colors.greenAccent
@@ -165,10 +155,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
               maxSimultaneousDrags: inputEnabled ? 1 : 0,
               feedback: Material(
                 color: Colors.transparent,
-                child: CoinWidget(
-                  denominationCents: coin,
-                  isDragging: true,
-                ),
+                child: CoinWidget(denominationCents: coin, isDragging: true),
               ),
               childWhenDragging: Opacity(
                 opacity: 0.3,
@@ -225,10 +212,7 @@ class CoinWidget extends StatelessWidget {
                 center: const Alignment(-0.35, -0.35),
                 colors: colors,
               ),
-              border: Border.all(
-                color: Colors.grey.shade800,
-                width: 2,
-              ),
+              border: Border.all(color: Colors.grey.shade800, width: 2),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black45,
@@ -270,11 +254,7 @@ class CoinWidget extends StatelessWidget {
       ];
     }
 
-    return [
-      Colors.grey.shade100,
-      Colors.grey.shade400,
-      Colors.grey.shade700,
-    ];
+    return [Colors.grey.shade100, Colors.grey.shade400, Colors.grey.shade700];
   }
 
   String _coinLabel(int denominationCents) {

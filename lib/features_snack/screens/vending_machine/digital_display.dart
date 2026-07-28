@@ -157,6 +157,7 @@ class _DigitalDisplayState extends State<DigitalDisplay> {
         ),
         const Spacer(),
         Container(
+          key: const ValueKey('status-led'),
           width: 9,
           height: 9,
           decoration: BoxDecoration(
@@ -287,6 +288,8 @@ class _DigitalDisplayState extends State<DigitalDisplay> {
     switch (phase) {
       case VendingMachinePhase.ready:
         return Colors.greenAccent;
+      case VendingMachinePhase.paymentInProgress:
+        return Colors.blueAccent;
       case VendingMachinePhase.dispensing:
       case VendingMachinePhase.thankYou:
         return Colors.amberAccent;
@@ -319,6 +322,8 @@ class _DigitalDisplayState extends State<DigitalDisplay> {
 
   Color _statusColor(VendingSessionState session) {
     switch (session.phase) {
+      case VendingMachinePhase.paymentInProgress:
+        return Colors.blueAccent;
       case VendingMachinePhase.dispensing:
       case VendingMachinePhase.thankYou:
         return Colors.amberAccent;
