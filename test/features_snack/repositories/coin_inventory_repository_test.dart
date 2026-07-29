@@ -28,6 +28,14 @@ void main() {
       100: 20,
       200: 10,
     });
+    expect(snapshot.ownCoins, {
+      5: 34,
+      10: 20,
+      20: 20,
+      50: 30,
+      100: 20,
+      200: 10,
+    });
   });
 
   test('Münzbestand kann gespeichert und erneut geladen werden', () async {
@@ -35,6 +43,7 @@ void main() {
       inventory: {5: 10, 10: 11, 20: 12, 50: 13, 100: 14, 200: 15},
       surplus: {5: 1, 10: 2, 20: 3, 50: 4, 100: 5, 200: 6},
       earnedSurplus: {5: 0, 10: 2, 20: 1, 50: 0, 100: 0, 200: 0},
+      ownCoins: {5: 11, 10: 11, 20: 14, 50: 17, 100: 19, 200: 21},
       targetStock: {5: 20, 10: 20, 20: 20, 50: 10, 100: 10, 200: 5},
       designPaths: <int, String?>{},
       changeDispenseCount: 7,
@@ -47,6 +56,7 @@ void main() {
     expect(loaded.inventory, snapshot.inventory);
     expect(loaded.surplus, snapshot.surplus);
     expect(loaded.earnedSurplus, snapshot.earnedSurplus);
+    expect(loaded.ownCoins, snapshot.ownCoins);
     expect(loaded.targetStock, snapshot.targetStock);
     expect(loaded.changeDispenseCount, 7);
     expect(loaded.dispenseContainerFillLevel, 2);
@@ -57,6 +67,7 @@ void main() {
       inventory: {20: 5},
       surplus: {20: 0},
       earnedSurplus: {20: 0},
+      ownCoins: {20: 5},
       targetStock: {20: 10},
       designPaths: <int, String?>{},
       changeDispenseCount: 0,
@@ -66,6 +77,7 @@ void main() {
       inventory: {20: 8},
       surplus: {20: 1},
       earnedSurplus: {20: 1},
+      ownCoins: {20: 8},
       targetStock: {20: 10},
       designPaths: <int, String?>{},
       changeDispenseCount: 2,
@@ -86,5 +98,6 @@ void main() {
     expect(loaded.inventory[20], 8);
     expect(loaded.surplus[20], 1);
     expect(loaded.earnedSurplus[20], 1);
+    expect(loaded.ownCoins[20], 8);
   });
 }

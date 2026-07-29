@@ -28,6 +28,15 @@ const defaultCoinEarnedSurplus = <int, int>{
   200: 0,
 };
 
+const defaultCoinOwnCoins = <int, int>{
+  5: 34,
+  10: 20,
+  20: 20,
+  50: 30,
+  100: 20,
+  200: 10,
+};
+
 const defaultCoinTargetStock = <int, int>{
   5: 30,
   10: 20,

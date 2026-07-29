@@ -4,6 +4,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/repositories/migration
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_006_product_model_part.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_007_coin_state_fields.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_008_coin_earned_surplus.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_009_coin_own_quantity.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -41,6 +42,7 @@ void main() {
       Migration006ProductModelPart(),
       Migration007CoinStateFields(),
       Migration008CoinEarnedSurplus(),
+      Migration009CoinOwnQuantity(),
     ];
 
     for (final migration in migrations) {
@@ -72,7 +74,41 @@ void main() {
         'target_quantity',
         'design_path',
         'earned_surplus_quantity',
+        'own_quantity',
       ]),
     );
+  });
+
+  test('Migration 9 übernimmt vorhandene Münzen als Herkunftsbestand', () async {
+    final db = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(
+        singleInstance: false,
+        onCreate: (database, version) async {
+          await database.execute('''
+            CREATE TABLE coin_inventory(
+              denomination_cents INTEGER PRIMARY KEY,
+              quantity INTEGER NOT NULL,
+              surplus_quantity INTEGER NOT NULL,
+              earned_surplus_quantity INTEGER NOT NULL
+            );
+          ''');
+          await database.insert('coin_inventory', {
+            'denomination_cents': 20,
+            'quantity': 20,
+            'surplus_quantity': 5,
+            'earned_surplus_quantity': 7,
+          });
+        },
+        version: 1,
+      ),
+    );
+
+    addTearDown(db.close);
+
+    await const Migration009CoinOwnQuantity().up(db);
+
+    final rows = await db.query('coin_inventory');
+    expect(rows.single['own_quantity'], 18);
   });
 }
