@@ -53,6 +53,7 @@ Future<_TestHarness> _createHarness({
   Map<int, int> inventory = _testInventory,
   Map<int, int> surplus = _zeroCoinMap,
   Map<int, int> earnedSurplus = _zeroCoinMap,
+  Map<int, int>? ownCoins,
   Map<int, int> targetStock = _targetStock,
 }) async {
   final database = await openTestDatabase();
@@ -78,6 +79,15 @@ Future<_TestHarness> _createHarness({
       inventory: inventory,
       surplus: surplus,
       earnedSurplus: earnedSurplus,
+      ownCoins:
+          ownCoins ??
+          {
+            for (final denomination in coinDenominationsCents)
+              denomination:
+                  (inventory[denomination] ?? 0) +
+                  (surplus[denomination] ?? 0) -
+                  (earnedSurplus[denomination] ?? 0),
+          },
       targetStock: targetStock,
       designPaths: const <int, String?>{},
       changeDispenseCount: 0,
@@ -137,6 +147,7 @@ void main() {
         expect(harness.state.coinInventory[10], 20);
         expect(harness.state.coinHarvestableQuantity(10), 0);
         expect(harness.state.coinEarnedSurplus[10], 0);
+        expect(harness.state.coinOwnCoins[10], 20);
       },
     );
 
@@ -154,6 +165,7 @@ void main() {
         expect(harness.state.coinInventory[10], 25);
         expect(harness.state.coinHarvestableQuantity(10), 5);
         expect(harness.state.coinEarnedSurplus[10], 0);
+        expect(harness.state.coinOwnCoins[10], 25);
       },
     );
 
@@ -169,6 +181,7 @@ void main() {
       expect(harness.state.coinInventory[10], 27);
       expect(harness.state.coinHarvestableQuantity(10), 7);
       expect(harness.state.coinEarnedSurplus[10], 0);
+      expect(harness.state.coinOwnCoins[10], 27);
     });
 
     test('erfolgreicher Verkauf erzeugt erwirtschafteten Überschuss', () async {
@@ -185,45 +198,217 @@ void main() {
       expect(harness.state.coinInventory[10], 21);
       expect(harness.state.coinHarvestableQuantity(10), 1);
       expect(harness.state.coinEarnedSurplus[10], 1);
+      expect(harness.state.coinOwnCoins[10], 20);
     });
 
-    test('manuell erzeugter Überschuss kann abgeschöpft werden', () async {
+    test('nur erwirtschafteter Überschuss wird abgeschöpft', () async {
       final harness = await _createHarness(
-        inventory: const {5: 0, 10: 25, 20: 0, 50: 0, 100: 0, 200: 0},
+        inventory: const {5: 0, 10: 27, 20: 0, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 7, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0},
         targetStock: target20,
       );
       addTearDown(harness.dispose);
 
-      harness.notifier.skimCoinSurplus(10);
+      harness.notifier.startCoinSettlement();
+      harness.notifier.harvestEarnedSurplus(10);
 
       expect(harness.state.coinInventory[10], 20);
       expect(harness.state.coinHarvestableQuantity(10), 0);
       expect(harness.state.coinEarnedSurplus[10], 0);
+      expect(harness.state.coinOwnCoins[10], 20);
+    });
+
+    test('manuelle Entnahme verwendet eigene Münzen zuerst', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 26, 20: 0, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 1, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 25, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.removeCoinsFromInventory(10, 4);
+
+      expect(harness.state.coinInventory[10], 22);
+      expect(harness.state.coinHarvestableQuantity(10), 2);
+      expect(harness.state.coinEarnedSurplus[10], 1);
+      expect(harness.state.coinOwnCoins[10], 21);
+    });
+
+    test('Wechselgeld-Rückführung entfernt nur eigene Münzen', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 19, 20: 0, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 4, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 15, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.startCoinSettlement();
+      harness.notifier.harvestAllEarnedSurplus();
+      expect(harness.state.coinInventory[10], 15);
+      expect(harness.state.coinOwnCoins[10], 15);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+
+      harness.notifier.returnAllOwnChangeCoins();
+      expect(harness.state.coinInventory[10], 0);
+      expect(harness.state.coinOwnCoins[10], 0);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+    });
+
+    test('Rückführung gibt nur noch vorhandene eigene Münzen zurück', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 14, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 14, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.startCoinSettlement();
+      harness.notifier.returnAllOwnChangeCoins();
+
+      expect(harness.state.coinInventory[10], 0);
+      expect(harness.state.coinOwnCoins[10], 0);
+      expect(harness.state.totalCoinInventory, 0);
+    });
+
+    test('Wechselgeldausgabe verbraucht eigene Münzen zuerst', () async {
+      final harness = await _createHarness(
+        priceCents: 40,
+        inventory: const {5: 0, 10: 0, 20: 25, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 0, 20: 5, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 0, 20: 20, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+      await harness.notifier.insertCoin(100);
+
+      expect(harness.state.outputChange, {20: 3});
+      expect(harness.state.coinOwnCoins[20], 17);
+      expect(harness.state.coinEarnedSurplus[20], 5);
+      expect(harness.state.coinEarnedSurplus[100], 1);
     });
 
     test(
-      'bei gemischtem Ursprung wird nicht erwirtschafteter Anteil zuerst entfernt',
+      'Rückführung aller Stückelungen ist ein gemeinsamer Zustandswechsel',
       () async {
         final harness = await _createHarness(
-          priceCents: 10,
-          inventory: const {5: 0, 10: 25, 20: 0, 50: 0, 100: 0, 200: 0},
-          targetStock: target20,
+          inventory: const {5: 1, 10: 2, 20: 3, 50: 4, 100: 5, 200: 6},
+          ownCoins: const {5: 1, 10: 2, 20: 3, 50: 4, 100: 5, 200: 6},
         );
         addTearDown(harness.dispose);
 
-        harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
-        await harness.notifier.insertCoin(10);
+        harness.notifier.startCoinSettlement();
+        harness.notifier.returnAllOwnChangeCoins();
 
-        expect(harness.state.coinHarvestableQuantity(10), 6);
-        expect(harness.state.coinEarnedSurplus[10], 1);
-
-        harness.notifier.removeCoinsFromInventory(10, 4);
-
-        expect(harness.state.coinInventory[10], 22);
-        expect(harness.state.coinHarvestableQuantity(10), 2);
-        expect(harness.state.coinEarnedSurplus[10], 1);
+        expect(harness.state.coinInventory, _zeroCoinMap);
+        expect(harness.state.coinOwnCoins, _zeroCoinMap);
+        expect(harness.state.coinEarnedSurplus, _zeroCoinMap);
       },
     );
+
+    test('Auf Soll ergänzt ausschließlich eigene Münzen', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 17, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 17, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: const {5: 0, 10: 40, 20: 0, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.fillCoinToTarget(10);
+
+      expect(harness.state.coinInventory[10], 40);
+      expect(harness.state.coinOwnCoins[10], 40);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+    });
+
+    test('Auf Soll verändert einen erreichten Bestand nicht', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 40, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 40, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: const {5: 0, 10: 40, 20: 0, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.fillCoinToTarget(10);
+
+      expect(harness.state.coinInventory[10], 40);
+      expect(harness.state.coinOwnCoins[10], 40);
+    });
+
+    test('Auf Soll reduziert einen Bestand über Soll niemals', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 45, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 45, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: const {5: 0, 10: 40, 20: 0, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.fillCoinToTarget(10);
+
+      expect(harness.state.coinInventory[10], 45);
+      expect(harness.state.coinOwnCoins[10], 45);
+    });
+
+    test('Münzsorte komplett leeren entfernt alle Herkunftsmengen', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 0, 20: 23, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 0, 20: 20, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 0, 20: 3, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.emptyCoinDenomination(20);
+
+      expect(harness.state.coinInventory[20], 0);
+      expect(harness.state.coinSurplus[20], 0);
+      expect(harness.state.coinOwnCoins[20], 0);
+      expect(harness.state.coinEarnedSurplus[20], 0);
+      expect(harness.state.coinHarvestableQuantity(20), 0);
+    });
+
+    test('Abschöpfung ist erst nach Beginn der Abrechnung möglich', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 27, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0},
+        earnedSurplus: const {5: 0, 10: 7, 20: 0, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.harvestAllEarnedSurplus();
+      expect(harness.state.coinEarnedSurplus[10], 7);
+
+      harness.notifier.startCoinSettlement();
+      expect(harness.state.isCoinSettlementOpen, isTrue);
+
+      harness.notifier.harvestAllEarnedSurplus();
+      expect(harness.state.coinInventory[10], 20);
+      expect(harness.state.coinOwnCoins[10], 20);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+
+      harness.notifier.finishCoinSettlement();
+      expect(harness.state.isCoinSettlementOpen, isFalse);
+    });
+
+    test('Wechselgeld-Rückführung benötigt eine offene Abrechnung', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0},
+        ownCoins: const {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0},
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.returnAllOwnChangeCoins();
+      expect(harness.state.coinInventory[10], 20);
+
+      harness.notifier.startCoinSettlement();
+      harness.notifier.returnAllOwnChangeCoins();
+
+      expect(harness.state.coinInventory[10], 0);
+      expect(harness.state.coinOwnCoins[10], 0);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+    });
   });
 
   group('Zahlungsphase', () {

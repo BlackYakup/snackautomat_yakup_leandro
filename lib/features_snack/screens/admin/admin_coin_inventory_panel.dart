@@ -1,5 +1,4 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/coin_asset_storage.dart';
@@ -164,9 +163,14 @@ class _SummaryStrip extends StatelessWidget {
             value: formatCents(session.totalCassetteValueCents),
           ),
           _SummaryChip(
-            label: 'Abschöpfbar',
+            label: 'Physisch über Soll/Abwurf',
             value:
                 '${session.totalCoinHarvestable} Stk. / ${formatCents(session.totalHarvestableValueCents)}',
+          ),
+          _SummaryChip(
+            label: 'Eigene Münzen',
+            value:
+                '${session.totalCoinOwnCoins} Stk. / ${formatCents(session.totalOwnCoinValueCents)}',
           ),
           _SummaryChip(
             label: 'Erwirtschaftet',
@@ -312,6 +316,8 @@ class _CassetteTable extends ConsumerWidget {
           final rowTotal = session.coinRowTotalCents(denomination);
           final imagePath = session.coinDesignPaths[denomination];
           final delta = ist - soll;
+          final physicalTotal = ist + (session.coinSurplus[denomination] ?? 0);
+          final missingToTarget = soll > ist ? soll - ist : 0;
 
           return TableRow(
             children: [
@@ -385,13 +391,27 @@ class _CassetteTable extends ConsumerWidget {
                                 .read(vendingSessionProvider.notifier)
                                 .removeCoinsFromInventory(denomination, 1),
                     ),
-                    _MiniTextButton(
-                      label: 'Leeren',
-                      onPressed: ist == 0
+                    _CompactIconButton(
+                      tooltip: 'Bis Soll auffüllen',
+                      icon: Icons.vertical_align_top,
+                      onPressed: missingToTarget == 0
                           ? null
                           : () => ref
                                 .read(vendingSessionProvider.notifier)
-                                .emptyCoinCassette(denomination),
+                                .fillCoinToTarget(denomination),
+                    ),
+                    _CompactIconButton(
+                      tooltip: 'Münzsorte komplett leeren',
+                      icon: Icons.delete_outline,
+                      destructive: true,
+                      onPressed: physicalTotal == 0
+                          ? null
+                          : () => _confirmEmptyDenomination(
+                              context,
+                              ref,
+                              denomination,
+                              physicalTotal,
+                            ),
                     ),
                   ],
                 ),
@@ -435,6 +455,43 @@ class _CassetteTable extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _confirmEmptyDenomination(
+    BuildContext context,
+    WidgetRef ref,
+    int denomination,
+    int quantity,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('${coinValueLabel(denomination)}-Münzen komplett leeren?'),
+        content: Text(
+          'Alle $quantity Münzen dieser Stückelung werden aus dem Automaten '
+          'entfernt. Eigene und erwirtschaftete Münzen dieser Stückelung '
+          'werden dabei gemeinsam entnommen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Leeren'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      ref
+          .read(vendingSessionProvider.notifier)
+          .emptyCoinDenomination(denomination);
+    }
+  }
 }
 
 class _SkimTable extends ConsumerWidget {
@@ -453,8 +510,9 @@ class _SkimTable extends ConsumerWidget {
             1: FlexColumnWidth(0.8),
             2: FlexColumnWidth(0.8),
             3: FlexColumnWidth(0.9),
-            4: FlexColumnWidth(1),
-            5: FlexColumnWidth(0.9),
+            4: FlexColumnWidth(0.9),
+            5: FlexColumnWidth(1),
+            6: FlexColumnWidth(0.9),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
@@ -466,6 +524,7 @@ class _SkimTable extends ConsumerWidget {
                 _TableHeaderCell('Münze'),
                 _TableHeaderCell('Ist Kassette'),
                 _TableHeaderCell('Abschöpfbar'),
+                _TableHeaderCell('Eigene'),
                 _TableHeaderCell('Erwirtschaftet'),
                 _TableHeaderCell('Summe'),
                 _TableHeaderCell('Abschöpfen'),
@@ -474,6 +533,7 @@ class _SkimTable extends ConsumerWidget {
             ...coinDenominationsCents.map((denomination) {
               final ist = session.coinInventory[denomination] ?? 0;
               final harvestable = session.coinHarvestableQuantity(denomination);
+              final own = session.coinOwnCoins[denomination] ?? 0;
               final earned = session.coinEarnedSurplus[denomination] ?? 0;
               final rowTotal = session.coinRowTotalCents(denomination);
 
@@ -485,6 +545,7 @@ class _SkimTable extends ConsumerWidget {
                     '$harvestable Stk.',
                     color: harvestable > 0 ? AdminColors.warning : null,
                   ),
+                  _TableDataCell('$own Stk.'),
                   _TableDataCell(
                     '$earned Stk.',
                     color: earned > 0 ? AdminColors.success : null,
@@ -495,14 +556,18 @@ class _SkimTable extends ConsumerWidget {
                       vertical: 4,
                       horizontal: 4,
                     ),
-                    child: _MiniButton(
-                      label: 'Abschöpfen',
-                      onPressed: harvestable == 0
-                          ? null
-                          : () => ref
-                                .read(vendingSessionProvider.notifier)
-                                .skimCoinSurplus(denomination),
-                    ),
+                    child: session.isCoinSettlementOpen
+                        ? _MiniButton(
+                            label: 'Abschöpfen',
+                            onPressed:
+                                earned == 0 ||
+                                    session.phase != VendingMachinePhase.ready
+                                ? null
+                                : () => ref
+                                      .read(vendingSessionProvider.notifier)
+                                      .harvestEarnedSurplus(denomination),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
               );
@@ -526,9 +591,14 @@ class _SkimTable extends ConsumerWidget {
                 value: formatCents(session.totalCassetteValueCents),
               ),
               _FooterStat(
-                label: 'Abschöpfbar',
+                label: 'Physisch über Soll/Abwurf',
                 value:
                     '${session.totalCoinHarvestable} Stk. / ${formatCents(session.totalHarvestableValueCents)}',
+              ),
+              _FooterStat(
+                label: 'Eigene Münzen',
+                value:
+                    '${session.totalCoinOwnCoins} Stk. / ${formatCents(session.totalOwnCoinValueCents)}',
               ),
               _FooterStat(
                 label: 'Erwirtschaftet',
@@ -633,13 +703,19 @@ class _GlobalActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(vendingSessionProvider.notifier);
     final session = ref.watch(vendingSessionProvider);
+    final settlementOpen = session.isCoinSettlementOpen;
+    final machineReady = session.phase == VendingMachinePhase.ready;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AdminColors.border)),
       ),
-      child: Row(
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
         children: [
           const Text(
             'Global:',
@@ -649,21 +725,67 @@ class _GlobalActions extends ConsumerWidget {
               color: AdminColors.textMuted,
             ),
           ),
-          const Spacer(),
-          _MiniTextButton(
-            label: 'Kassette leeren',
-            onPressed: notifier.emptyAllCoinCassettes,
+          if (!settlementOpen)
+            FilledButton.icon(
+              onPressed: machineReady ? notifier.startCoinSettlement : null,
+              icon: const Icon(Icons.outbox, size: 17),
+              label: const Text('Kassette leeren'),
+            ),
+          if (settlementOpen) ...[
+            FilledButton.icon(
+              onPressed: machineReady && session.totalCoinEarnedSurplus > 0
+                  ? notifier.harvestAllEarnedSurplus
+                  : null,
+              icon: const Icon(Icons.savings, size: 17),
+              label: const Text('Einnahmen abschöpfen'),
+            ),
+            OutlinedButton.icon(
+              onPressed: machineReady && session.totalCoinOwnCoins > 0
+                  ? () => _confirmOwnCoinReturn(context, notifier)
+                  : null,
+              icon: const Icon(Icons.currency_exchange, size: 17),
+              label: const Text('Wechselgeld-Rückführung'),
+            ),
+            TextButton.icon(
+              onPressed: machineReady ? notifier.finishCoinSettlement : null,
+              icon: const Icon(Icons.check, size: 17),
+              label: const Text('Abrechnung beenden'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmOwnCoinReturn(
+    BuildContext context,
+    VendingSessionNotifier notifier,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Wechselgeld-Rückführung durchführen?'),
+        content: const Text(
+          'Die noch vorhandenen eigenen Wechselgeldmünzen werden aus dem '
+          'Automaten entnommen. Danach kann möglicherweise kein Wechselgeld '
+          'mehr ausgegeben werden.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Abbrechen'),
           ),
-          const SizedBox(width: 6),
-          _MiniTextButton(
-            label: 'Überschuss abschöpfen',
-            onPressed: session.totalCoinHarvestable == 0
-                ? null
-                : notifier.skimAllCoinSurplus,
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Rückführen'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      notifier.returnAllOwnChangeCoins();
+    }
   }
 }
 
@@ -749,23 +871,43 @@ class _MiniButton extends StatelessWidget {
   }
 }
 
-class _MiniTextButton extends StatelessWidget {
-  const _MiniTextButton({required this.label, required this.onPressed});
+class _CompactIconButton extends StatelessWidget {
+  const _CompactIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.destructive = false,
+  });
 
-  final String label;
+  final String tooltip;
+  final IconData icon;
   final VoidCallback? onPressed;
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        minimumSize: const Size(0, 28),
-        textStyle: const TextStyle(fontSize: 11),
-        visualDensity: VisualDensity.compact,
+    final foregroundColor = destructive
+        ? AdminColors.danger
+        : AdminColors.accent;
+
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        width: 32,
+        height: 30,
+        child: IconButton(
+          onPressed: onPressed,
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          iconSize: 17,
+          style: IconButton.styleFrom(
+            foregroundColor: foregroundColor,
+            disabledForegroundColor: AdminColors.textMuted,
+            backgroundColor: foregroundColor.withAlpha(20),
+          ),
+          icon: Icon(icon),
+        ),
       ),
-      child: Text(label),
     );
   }
 }

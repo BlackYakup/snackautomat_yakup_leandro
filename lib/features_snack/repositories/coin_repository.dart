@@ -6,6 +6,7 @@ class CoinSnapshot {
     required this.inventory,
     required this.surplus,
     required this.earnedSurplus,
+    required this.ownCoins,
     required this.targetStock,
     required this.designPaths,
     required this.changeDispenseCount,
@@ -15,6 +16,7 @@ class CoinSnapshot {
   final Map<int, int> inventory;
   final Map<int, int> surplus;
   final Map<int, int> earnedSurplus;
+  final Map<int, int> ownCoins;
   final Map<int, int> targetStock;
   final Map<int, String?> designPaths;
   final int changeDispenseCount;
@@ -40,6 +42,7 @@ class CoinRepository {
     final inventory = <int, int>{};
     final surplus = <int, int>{};
     final earnedSurplus = <int, int>{};
+    final ownCoins = <int, int>{};
     final targetStock = <int, int>{};
     final designPaths = <int, String?>{};
 
@@ -47,6 +50,7 @@ class CoinRepository {
       inventory[denomination] = 0;
       surplus[denomination] = 0;
       earnedSurplus[denomination] = 0;
+      ownCoins[denomination] = 0;
       targetStock[denomination] = defaultCoinTargetStock[denomination] ?? 0;
       designPaths[denomination] = null;
     }
@@ -56,6 +60,7 @@ class CoinRepository {
       inventory[denomination] = row['quantity'] as int? ?? 0;
       surplus[denomination] = row['surplus_quantity'] as int? ?? 0;
       earnedSurplus[denomination] = row['earned_surplus_quantity'] as int? ?? 0;
+      ownCoins[denomination] = row['own_quantity'] as int? ?? 0;
       targetStock[denomination] =
           row['target_quantity'] as int? ??
           defaultCoinTargetStock[denomination] ??
@@ -67,6 +72,7 @@ class CoinRepository {
       inventory: inventory,
       surplus: surplus,
       earnedSurplus: earnedSurplus,
+      ownCoins: ownCoins,
       targetStock: targetStock,
       designPaths: designPaths,
       changeDispenseCount: await _readIntSetting(
@@ -88,6 +94,7 @@ class CoinRepository {
           'quantity': snapshot.inventory[denomination] ?? 0,
           'surplus_quantity': snapshot.surplus[denomination] ?? 0,
           'earned_surplus_quantity': snapshot.earnedSurplus[denomination] ?? 0,
+          'own_quantity': snapshot.ownCoins[denomination] ?? 0,
           'target_quantity': snapshot.targetStock[denomination] ?? 0,
           'design_path': snapshot.designPaths[denomination],
         }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -113,6 +120,7 @@ class CoinRepository {
           'surplus_quantity': defaultCoinSurplus[denomination] ?? 0,
           'earned_surplus_quantity':
               defaultCoinEarnedSurplus[denomination] ?? 0,
+          'own_quantity': defaultCoinOwnCoins[denomination] ?? 0,
           'target_quantity': defaultCoinTargetStock[denomination] ?? 0,
         });
       }
