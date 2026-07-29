@@ -349,6 +349,7 @@ class VendingSessionState {
     this.statusMessage = 'Bitte Produktposition eingeben.',
     this.coinInventory = defaultCoinInventory,
     this.coinSurplus = defaultCoinSurplus,
+    this.coinEarnedSurplus = defaultCoinEarnedSurplus,
     this.coinTargetStock = defaultCoinTargetStock,
     this.coinDesignPaths = const <int, String?>{},
     this.changeDispenseCount = 20,
@@ -372,6 +373,7 @@ class VendingSessionState {
   final String statusMessage;
   final Map<int, int> coinInventory;
   final Map<int, int> coinSurplus;
+  final Map<int, int> coinEarnedSurplus;
   final Map<int, int> coinTargetStock;
   final Map<int, String?> coinDesignPaths;
   final int changeDispenseCount;
@@ -383,6 +385,34 @@ class VendingSessionState {
 
   int get totalCoinSurplus =>
       coinSurplus.values.fold<int>(0, (sum, count) => sum + count);
+
+  int coinHarvestableQuantity(int denominationCents) {
+    final inventory = coinInventory[denominationCents] ?? 0;
+    final target = coinTargetStock[denominationCents] ?? 0;
+    final physicalSurplus = coinSurplus[denominationCents] ?? 0;
+    final cassetteExcess = inventory - target;
+
+    return physicalSurplus + (cassetteExcess > 0 ? cassetteExcess : 0);
+  }
+
+  int get totalCoinHarvestable => coinDenominationsCents.fold<int>(
+    0,
+    (sum, denomination) => sum + coinHarvestableQuantity(denomination),
+  );
+
+  int get totalHarvestableValueCents => coinDenominationsCents.fold<int>(
+    0,
+    (sum, denomination) =>
+        sum + denomination * coinHarvestableQuantity(denomination),
+  );
+
+  int get totalCoinEarnedSurplus =>
+      coinEarnedSurplus.values.fold<int>(0, (sum, count) => sum + count);
+
+  int get totalEarnedSurplusValueCents => coinEarnedSurplus.entries.fold<int>(
+    0,
+    (sum, entry) => sum + entry.key * entry.value,
+  );
 
   int get totalSurplusValueCents => coinSurplus.entries.fold<int>(
     0,
@@ -442,6 +472,7 @@ class VendingSessionState {
     String? statusMessage,
     Map<int, int>? coinInventory,
     Map<int, int>? coinSurplus,
+    Map<int, int>? coinEarnedSurplus,
     Map<int, int>? coinTargetStock,
     Map<int, String?>? coinDesignPaths,
     int? changeDispenseCount,
@@ -466,6 +497,7 @@ class VendingSessionState {
       statusMessage: statusMessage ?? this.statusMessage,
       coinInventory: coinInventory ?? this.coinInventory,
       coinSurplus: coinSurplus ?? this.coinSurplus,
+      coinEarnedSurplus: coinEarnedSurplus ?? this.coinEarnedSurplus,
       coinTargetStock: coinTargetStock ?? this.coinTargetStock,
       coinDesignPaths: coinDesignPaths ?? this.coinDesignPaths,
       changeDispenseCount: changeDispenseCount ?? this.changeDispenseCount,
@@ -521,6 +553,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       state = state.copyWith(
         coinInventory: snapshot.inventory,
         coinSurplus: snapshot.surplus,
+        coinEarnedSurplus: snapshot.earnedSurplus,
         coinTargetStock: snapshot.targetStock,
         coinDesignPaths: snapshot.designPaths,
         changeDispenseCount: snapshot.changeDispenseCount,
@@ -540,6 +573,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
           CoinSnapshot(
             inventory: state.coinInventory,
             surplus: state.coinSurplus,
+            earnedSurplus: state.coinEarnedSurplus,
             targetStock: state.coinTargetStock,
             designPaths: state.coinDesignPaths,
             changeDispenseCount: state.changeDispenseCount,
@@ -830,6 +864,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     state = VendingSessionState(
       coinInventory: state.coinInventory,
       coinSurplus: state.coinSurplus,
+      coinEarnedSurplus: state.coinEarnedSurplus,
       coinTargetStock: state.coinTargetStock,
       coinDesignPaths: state.coinDesignPaths,
       changeDispenseCount: state.changeDispenseCount,
@@ -910,7 +945,41 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
       return;
     }
 
-    final newCoinInventory = _subtractCoinMap(availableCoins, changeCoins);
+    final inventoryAfterChange = _subtractCoinMap(availableCoins, changeCoins);
+    final newCoinInventory = <int, int>{};
+    final newCoinSurplus = Map<int, int>.from(state.coinSurplus);
+
+    for (final denomination in coinDenominationsCents) {
+      final quantity = inventoryAfterChange[denomination] ?? 0;
+
+      if (quantity > coinCassetteCapacity) {
+        final overflow = quantity - coinCassetteCapacity;
+        newCoinInventory[denomination] = coinCassetteCapacity;
+        newCoinSurplus[denomination] =
+            (newCoinSurplus[denomination] ?? 0) + overflow;
+      } else {
+        newCoinInventory[denomination] = quantity;
+      }
+    }
+
+    final newEarnedSurplus = <int, int>{};
+
+    for (final denomination in coinDenominationsCents) {
+      final harvestableBefore = state.coinHarvestableQuantity(denomination);
+      final harvestableAfter = _harvestableQuantity(
+        inventory: newCoinInventory[denomination] ?? 0,
+        physicalSurplus: newCoinSurplus[denomination] ?? 0,
+        target: state.coinTargetStock[denomination] ?? 0,
+      );
+      final harvestableGrowth = harvestableAfter - harvestableBefore;
+      final earnedBefore = state.coinEarnedSurplus[denomination] ?? 0;
+      final earnedCandidate =
+          earnedBefore + (harvestableGrowth > 0 ? harvestableGrowth : 0);
+
+      newEarnedSurplus[denomination] = earnedCandidate > harvestableAfter
+          ? harvestableAfter
+          : earnedCandidate;
+    }
     final slotCode =
         state.selectedSlotCode ??
         '${currentProduct.rowLabel}${currentProduct.columnNumber}';
@@ -929,7 +998,8 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     state = state.copyWith(
       phase: VendingMachinePhase.dispensing,
       coinInventory: newCoinInventory,
-      coinSurplus: state.coinSurplus,
+      coinSurplus: newCoinSurplus,
+      coinEarnedSurplus: newEarnedSurplus,
       coinTargetStock: state.coinTargetStock,
       coinDesignPaths: state.coinDesignPaths,
       changeDispenseCount: state.changeDispenseCount + changeCoinCount,
@@ -994,6 +1064,7 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     state = VendingSessionState(
       coinInventory: state.coinInventory,
       coinSurplus: state.coinSurplus,
+      coinEarnedSurplus: state.coinEarnedSurplus,
       coinTargetStock: state.coinTargetStock,
       coinDesignPaths: state.coinDesignPaths,
       changeDispenseCount: state.changeDispenseCount,
@@ -1046,9 +1117,16 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     }
 
     coinInventory[denominationCents] = next;
+    final coinEarnedSurplus = _clampEarnedSurplus(
+      earnedSurplus: state.coinEarnedSurplus,
+      inventory: coinInventory,
+      physicalSurplus: state.coinSurplus,
+      targetStock: state.coinTargetStock,
+    );
 
     state = state.copyWith(
       coinInventory: coinInventory,
+      coinEarnedSurplus: coinEarnedSurplus,
       statusMessage: '$quantity x ${formatCents(denominationCents)} entnommen.',
     );
     _scheduleCoinPersist();
@@ -1117,9 +1195,16 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
 
     final coinTargetStock = Map<int, int>.from(state.coinTargetStock);
     coinTargetStock[denominationCents] = target;
+    final coinEarnedSurplus = _clampEarnedSurplus(
+      earnedSurplus: state.coinEarnedSurplus,
+      inventory: state.coinInventory,
+      physicalSurplus: state.coinSurplus,
+      targetStock: coinTargetStock,
+    );
 
     state = state.copyWith(
       coinTargetStock: coinTargetStock,
+      coinEarnedSurplus: coinEarnedSurplus,
       statusMessage:
           'Soll-Bestand ${formatCents(denominationCents)}: $target Stk.',
     );
@@ -1127,17 +1212,26 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void skimCoinSurplus(int denominationCents) {
-    final coinSurplus = Map<int, int>.from(state.coinSurplus);
-    final skimmed = coinSurplus[denominationCents] ?? 0;
+    final skimmed = state.coinHarvestableQuantity(denominationCents);
 
     if (skimmed == 0) {
       return;
     }
 
+    final coinInventory = Map<int, int>.from(state.coinInventory);
+    final coinSurplus = Map<int, int>.from(state.coinSurplus);
+    final coinEarnedSurplus = Map<int, int>.from(state.coinEarnedSurplus);
+    final target = state.coinTargetStock[denominationCents] ?? 0;
+    final inventory = coinInventory[denominationCents] ?? 0;
+
+    coinInventory[denominationCents] = inventory > target ? target : inventory;
     coinSurplus[denominationCents] = 0;
+    coinEarnedSurplus[denominationCents] = 0;
 
     state = state.copyWith(
+      coinInventory: coinInventory,
       coinSurplus: coinSurplus,
+      coinEarnedSurplus: coinEarnedSurplus,
       statusMessage:
           'Abschöpfung: $skimmed x ${formatCents(denominationCents)} entnommen.',
     );
@@ -1145,10 +1239,24 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void skimAllCoinSurplus() {
-    final hadSurplus = state.totalCoinSurplus > 0;
+    final hadSurplus = state.totalCoinHarvestable > 0;
+    final coinInventory = Map<int, int>.from(state.coinInventory);
+
+    for (final denomination in coinDenominationsCents) {
+      final inventory = coinInventory[denomination] ?? 0;
+      final target = state.coinTargetStock[denomination] ?? 0;
+
+      if (inventory > target) {
+        coinInventory[denomination] = target;
+      }
+    }
 
     state = state.copyWith(
+      coinInventory: coinInventory,
       coinSurplus: {
+        for (final denomination in coinDenominationsCents) denomination: 0,
+      },
+      coinEarnedSurplus: {
         for (final denomination in coinDenominationsCents) denomination: 0,
       },
       dispenseContainerFillLevel: 0,
@@ -1160,10 +1268,19 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
   }
 
   void clearCoinSurplus() {
+    final coinSurplus = {
+      for (final denomination in coinDenominationsCents) denomination: 0,
+    };
+    final coinEarnedSurplus = _clampEarnedSurplus(
+      earnedSurplus: state.coinEarnedSurplus,
+      inventory: state.coinInventory,
+      physicalSurplus: coinSurplus,
+      targetStock: state.coinTargetStock,
+    );
+
     state = state.copyWith(
-      coinSurplus: {
-        for (final denomination in coinDenominationsCents) denomination: 0,
-      },
+      coinSurplus: coinSurplus,
+      coinEarnedSurplus: coinEarnedSurplus,
       dispenseContainerFillLevel: 0,
       statusMessage: 'Überschuss und Abwurfbehälter geleert.',
     );
@@ -1237,6 +1354,37 @@ class VendingSessionNotifier extends Notifier<VendingSessionState> {
     }
 
     return selectedProduct;
+  }
+
+  int _harvestableQuantity({
+    required int inventory,
+    required int physicalSurplus,
+    required int target,
+  }) {
+    final cassetteExcess = inventory - target;
+    return physicalSurplus + (cassetteExcess > 0 ? cassetteExcess : 0);
+  }
+
+  Map<int, int> _clampEarnedSurplus({
+    required Map<int, int> earnedSurplus,
+    required Map<int, int> inventory,
+    required Map<int, int> physicalSurplus,
+    required Map<int, int> targetStock,
+  }) {
+    final result = <int, int>{};
+
+    for (final denomination in coinDenominationsCents) {
+      final harvestable = _harvestableQuantity(
+        inventory: inventory[denomination] ?? 0,
+        physicalSurplus: physicalSurplus[denomination] ?? 0,
+        target: targetStock[denomination] ?? 0,
+      );
+      final earned = earnedSurplus[denomination] ?? 0;
+
+      result[denomination] = earned > harvestable ? harvestable : earned;
+    }
+
+    return result;
   }
 
   Map<int, int> _addCoinMaps(

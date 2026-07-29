@@ -34,6 +34,7 @@ void main() {
     const snapshot = CoinSnapshot(
       inventory: {5: 10, 10: 11, 20: 12, 50: 13, 100: 14, 200: 15},
       surplus: {5: 1, 10: 2, 20: 3, 50: 4, 100: 5, 200: 6},
+      earnedSurplus: {5: 0, 10: 2, 20: 1, 50: 0, 100: 0, 200: 0},
       targetStock: {5: 20, 10: 20, 20: 20, 50: 10, 100: 10, 200: 5},
       designPaths: <int, String?>{},
       changeDispenseCount: 7,
@@ -45,6 +46,7 @@ void main() {
 
     expect(loaded.inventory, snapshot.inventory);
     expect(loaded.surplus, snapshot.surplus);
+    expect(loaded.earnedSurplus, snapshot.earnedSurplus);
     expect(loaded.targetStock, snapshot.targetStock);
     expect(loaded.changeDispenseCount, 7);
     expect(loaded.dispenseContainerFillLevel, 2);
@@ -54,6 +56,7 @@ void main() {
     const first = CoinSnapshot(
       inventory: {20: 5},
       surplus: {20: 0},
+      earnedSurplus: {20: 0},
       targetStock: {20: 10},
       designPaths: <int, String?>{},
       changeDispenseCount: 0,
@@ -62,6 +65,7 @@ void main() {
     const second = CoinSnapshot(
       inventory: {20: 8},
       surplus: {20: 1},
+      earnedSurplus: {20: 1},
       targetStock: {20: 10},
       designPaths: <int, String?>{},
       changeDispenseCount: 2,
@@ -81,5 +85,6 @@ void main() {
     expect(rows, hasLength(1));
     expect(loaded.inventory[20], 8);
     expect(loaded.surplus[20], 1);
+    expect(loaded.earnedSurplus[20], 1);
   });
 }

@@ -164,9 +164,14 @@ class _SummaryStrip extends StatelessWidget {
             value: formatCents(session.totalCassetteValueCents),
           ),
           _SummaryChip(
-            label: 'Überschuss',
+            label: 'Abschöpfbar',
             value:
-                '${session.totalCoinSurplus} Stk. / ${formatCents(session.totalSurplusValueCents)}',
+                '${session.totalCoinHarvestable} Stk. / ${formatCents(session.totalHarvestableValueCents)}',
+          ),
+          _SummaryChip(
+            label: 'Erwirtschaftet',
+            value:
+                '${session.totalCoinEarnedSurplus} Stk. / ${formatCents(session.totalEarnedSurplusValueCents)}',
           ),
           _SummaryChip(
             label: 'Summe insgesamt',
@@ -196,7 +201,10 @@ class _SummaryChip extends StatelessWidget {
       text: TextSpan(
         style: const TextStyle(fontSize: 12, color: AdminColors.textSecondary),
         children: [
-          TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           TextSpan(
             text: value,
             style: TextStyle(
@@ -300,7 +308,7 @@ class _CassetteTable extends ConsumerWidget {
         ...coinDenominationsCents.map((denomination) {
           final ist = session.coinInventory[denomination] ?? 0;
           final soll = session.coinTargetStock[denomination] ?? 0;
-          final surplus = session.coinSurplus[denomination] ?? 0;
+          final harvestable = session.coinHarvestableQuantity(denomination);
           final rowTotal = session.coinRowTotalCents(denomination);
           final imagePath = session.coinDesignPaths[denomination];
           final delta = ist - soll;
@@ -321,8 +329,8 @@ class _CassetteTable extends ConsumerWidget {
                 color: delta < 0
                     ? AdminColors.danger
                     : delta > 0
-                        ? AdminColors.success
-                        : null,
+                    ? AdminColors.success
+                    : null,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
@@ -337,9 +345,13 @@ class _CassetteTable extends ConsumerWidget {
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 6,
+                      ),
                     ),
-                    onSubmitted: (value) => onTargetChanged(denomination, value),
+                    onSubmitted: (value) =>
+                        onTargetChanged(denomination, value),
                     onEditingComplete: () => onTargetChanged(
                       denomination,
                       targetControllerFor(denomination).text,
@@ -349,7 +361,9 @@ class _CassetteTable extends ConsumerWidget {
               ),
               _TableDataCell(
                 formatCents(rowTotal),
-                subtext: surplus > 0 ? '+${formatCents(denomination * surplus)} Ü' : null,
+                subtext: harvestable > 0
+                    ? '+${formatCents(denomination * harvestable)} abschöpfbar'
+                    : null,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
@@ -368,16 +382,16 @@ class _CassetteTable extends ConsumerWidget {
                       onPressed: ist == 0
                           ? null
                           : () => ref
-                              .read(vendingSessionProvider.notifier)
-                              .removeCoinsFromInventory(denomination, 1),
+                                .read(vendingSessionProvider.notifier)
+                                .removeCoinsFromInventory(denomination, 1),
                     ),
                     _MiniTextButton(
                       label: 'Leeren',
                       onPressed: ist == 0
                           ? null
                           : () => ref
-                              .read(vendingSessionProvider.notifier)
-                              .emptyCoinCassette(denomination),
+                                .read(vendingSessionProvider.notifier)
+                                .emptyCoinCassette(denomination),
                     ),
                   ],
                 ),
@@ -438,8 +452,9 @@ class _SkimTable extends ConsumerWidget {
             0: FlexColumnWidth(1),
             1: FlexColumnWidth(0.8),
             2: FlexColumnWidth(0.8),
-            3: FlexColumnWidth(1),
-            4: FlexColumnWidth(0.9),
+            3: FlexColumnWidth(0.9),
+            4: FlexColumnWidth(1),
+            5: FlexColumnWidth(0.9),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
@@ -450,14 +465,16 @@ class _SkimTable extends ConsumerWidget {
               children: [
                 _TableHeaderCell('Münze'),
                 _TableHeaderCell('Ist Kassette'),
-                _TableHeaderCell('Überschuss'),
+                _TableHeaderCell('Abschöpfbar'),
+                _TableHeaderCell('Erwirtschaftet'),
                 _TableHeaderCell('Summe'),
                 _TableHeaderCell('Abschöpfen'),
               ],
             ),
             ...coinDenominationsCents.map((denomination) {
               final ist = session.coinInventory[denomination] ?? 0;
-              final surplus = session.coinSurplus[denomination] ?? 0;
+              final harvestable = session.coinHarvestableQuantity(denomination);
+              final earned = session.coinEarnedSurplus[denomination] ?? 0;
               final rowTotal = session.coinRowTotalCents(denomination);
 
               return TableRow(
@@ -465,19 +482,26 @@ class _SkimTable extends ConsumerWidget {
                   _TableDataCell(coinValueLabel(denomination)),
                   _TableDataCell('$ist Stk.'),
                   _TableDataCell(
-                    '$surplus Stk.',
-                    color: surplus > 0 ? AdminColors.warning : null,
+                    '$harvestable Stk.',
+                    color: harvestable > 0 ? AdminColors.warning : null,
+                  ),
+                  _TableDataCell(
+                    '$earned Stk.',
+                    color: earned > 0 ? AdminColors.success : null,
                   ),
                   _TableDataCell(formatCents(rowTotal)),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 4,
+                    ),
                     child: _MiniButton(
                       label: 'Abschöpfen',
-                      onPressed: surplus == 0
+                      onPressed: harvestable == 0
                           ? null
                           : () => ref
-                              .read(vendingSessionProvider.notifier)
-                              .skimCoinSurplus(denomination),
+                                .read(vendingSessionProvider.notifier)
+                                .skimCoinSurplus(denomination),
                     ),
                   ),
                 ],
@@ -502,9 +526,14 @@ class _SkimTable extends ConsumerWidget {
                 value: formatCents(session.totalCassetteValueCents),
               ),
               _FooterStat(
-                label: 'Überschuss',
+                label: 'Abschöpfbar',
                 value:
-                    '${session.totalCoinSurplus} Stk. / ${formatCents(session.totalSurplusValueCents)}',
+                    '${session.totalCoinHarvestable} Stk. / ${formatCents(session.totalHarvestableValueCents)}',
+              ),
+              _FooterStat(
+                label: 'Erwirtschaftet',
+                value:
+                    '${session.totalCoinEarnedSurplus} Stk. / ${formatCents(session.totalEarnedSurplusValueCents)}',
               ),
               _FooterStat(
                 label: 'Gesamt im Automaten',
@@ -603,6 +632,7 @@ class _GlobalActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(vendingSessionProvider.notifier);
+    final session = ref.watch(vendingSessionProvider);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
@@ -613,7 +643,11 @@ class _GlobalActions extends ConsumerWidget {
         children: [
           const Text(
             'Global:',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AdminColors.textMuted),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AdminColors.textMuted,
+            ),
           ),
           const Spacer(),
           _MiniTextButton(
@@ -623,7 +657,9 @@ class _GlobalActions extends ConsumerWidget {
           const SizedBox(width: 6),
           _MiniTextButton(
             label: 'Überschuss abschöpfen',
-            onPressed: notifier.skimAllCoinSurplus,
+            onPressed: session.totalCoinHarvestable == 0
+                ? null
+                : notifier.skimAllCoinSurplus,
           ),
         ],
       ),
@@ -690,10 +726,7 @@ class _TableDataCell extends StatelessWidget {
 }
 
 class _MiniButton extends StatelessWidget {
-  const _MiniButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _MiniButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback? onPressed;
@@ -749,8 +782,14 @@ class _FooterStat extends StatelessWidget {
       text: TextSpan(
         style: const TextStyle(fontSize: 11, color: AdminColors.textSecondary),
         children: [
-          TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
-          TextSpan(text: value, style: const TextStyle(color: AdminColors.textPrimary)),
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          TextSpan(
+            text: value,
+            style: const TextStyle(color: AdminColors.textPrimary),
+          ),
         ],
       ),
     );

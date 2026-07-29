@@ -51,6 +51,9 @@ Future<_TestHarness> _createHarness({
   int priceCents = 160,
   int stockQuantity = 3,
   Map<int, int> inventory = _testInventory,
+  Map<int, int> surplus = _zeroCoinMap,
+  Map<int, int> earnedSurplus = _zeroCoinMap,
+  Map<int, int> targetStock = _targetStock,
 }) async {
   final database = await openTestDatabase();
   final productId = await seedProduct(
@@ -73,8 +76,9 @@ Future<_TestHarness> _createHarness({
   await CoinRepository(database).saveSnapshot(
     CoinSnapshot(
       inventory: inventory,
-      surplus: _zeroCoinMap,
-      targetStock: _targetStock,
+      surplus: surplus,
+      earnedSurplus: earnedSurplus,
+      targetStock: targetStock,
       designPaths: const <int, String?>{},
       changeDispenseCount: 0,
       dispenseContainerFillLevel: 0,
@@ -115,6 +119,113 @@ Future<void> _waitUntil(bool Function() condition) async {
 }
 
 void main() {
+  group('Münzbestand und Abschöpfung', () {
+    const inventory17 = {5: 0, 10: 17, 20: 0, 50: 0, 100: 0, 200: 0};
+    const target20 = {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0};
+
+    test(
+      'manuelles Auffüllen exakt bis Soll erzeugt keinen Überschuss',
+      () async {
+        final harness = await _createHarness(
+          inventory: inventory17,
+          targetStock: target20,
+        );
+        addTearDown(harness.dispose);
+
+        harness.notifier.addCoinsToInventory(10, 3);
+
+        expect(harness.state.coinInventory[10], 20);
+        expect(harness.state.coinHarvestableQuantity(10), 0);
+        expect(harness.state.coinEarnedSurplus[10], 0);
+      },
+    );
+
+    test(
+      'manuelles Auffüllen über Soll wird abschöpfbar aber nicht erwirtschaftet',
+      () async {
+        final harness = await _createHarness(
+          inventory: inventory17,
+          targetStock: target20,
+        );
+        addTearDown(harness.dispose);
+
+        harness.notifier.addCoinsToInventory(10, 8);
+
+        expect(harness.state.coinInventory[10], 25);
+        expect(harness.state.coinHarvestableQuantity(10), 5);
+        expect(harness.state.coinEarnedSurplus[10], 0);
+      },
+    );
+
+    test('bereits über Soll kann weiter manuell aufgefüllt werden', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 23, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.addCoinsToInventory(10, 4);
+
+      expect(harness.state.coinInventory[10], 27);
+      expect(harness.state.coinHarvestableQuantity(10), 7);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+    });
+
+    test('erfolgreicher Verkauf erzeugt erwirtschafteten Überschuss', () async {
+      final harness = await _createHarness(
+        priceCents: 10,
+        inventory: const {5: 0, 10: 20, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+      await harness.notifier.insertCoin(10);
+
+      expect(harness.state.coinInventory[10], 21);
+      expect(harness.state.coinHarvestableQuantity(10), 1);
+      expect(harness.state.coinEarnedSurplus[10], 1);
+    });
+
+    test('manuell erzeugter Überschuss kann abgeschöpft werden', () async {
+      final harness = await _createHarness(
+        inventory: const {5: 0, 10: 25, 20: 0, 50: 0, 100: 0, 200: 0},
+        targetStock: target20,
+      );
+      addTearDown(harness.dispose);
+
+      harness.notifier.skimCoinSurplus(10);
+
+      expect(harness.state.coinInventory[10], 20);
+      expect(harness.state.coinHarvestableQuantity(10), 0);
+      expect(harness.state.coinEarnedSurplus[10], 0);
+    });
+
+    test(
+      'bei gemischtem Ursprung wird nicht erwirtschafteter Anteil zuerst entfernt',
+      () async {
+        final harness = await _createHarness(
+          priceCents: 10,
+          inventory: const {5: 0, 10: 25, 20: 0, 50: 0, 100: 0, 200: 0},
+          targetStock: target20,
+        );
+        addTearDown(harness.dispose);
+
+        harness.notifier.selectProduct(harness.product, selectedSlotCode: 'C4');
+        await harness.notifier.insertCoin(10);
+
+        expect(harness.state.coinHarvestableQuantity(10), 6);
+        expect(harness.state.coinEarnedSurplus[10], 1);
+
+        harness.notifier.removeCoinsFromInventory(10, 4);
+
+        expect(harness.state.coinInventory[10], 22);
+        expect(harness.state.coinHarvestableQuantity(10), 2);
+        expect(harness.state.coinEarnedSurplus[10], 1);
+      },
+    );
+  });
+
   group('Zahlungsphase', () {
     test('erfolgreiche Produktauswahl startet die Zahlungsphase', () async {
       final harness = await _createHarness();

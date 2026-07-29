@@ -6,6 +6,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/repositories/migration
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_005_product_model_path.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_006_product_model_part.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_007_coin_state_fields.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_008_coin_earned_surplus.dart';
 import 'package:sqflite/sqflite.dart';
 
 final List<Migration> allMigrations = <Migration>[
@@ -16,11 +17,16 @@ final List<Migration> allMigrations = <Migration>[
   const Migration005ProductModelPath(),
   const Migration006ProductModelPart(),
   const Migration007CoinStateFields(),
+  const Migration008CoinEarnedSurplus(),
 ]..sort((a, b) => a.version.compareTo(b.version));
 
 int get currentDatabaseVersion => allMigrations.last.version;
 
-Future<void> runMigrations(Database db, {required int fromVersion, required int toVersion}) async {
+Future<void> runMigrations(
+  Database db, {
+  required int fromVersion,
+  required int toVersion,
+}) async {
   for (final migration in allMigrations) {
     if (migration.version > fromVersion && migration.version <= toVersion) {
       await migration.up(db);
