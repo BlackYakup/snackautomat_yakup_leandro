@@ -1,0 +1,22 @@
+{
+  "name": "snackautomat-docs-regen",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Regenerate install/ docs via Cursor SDK Agent.prompt",
+  "type": "module",
+  "scripts": {
+    "regen": "tsx src/regen-docs.ts",
+    "start": "tsx src/regen-docs.ts"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.27"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3"
+  }
+}
