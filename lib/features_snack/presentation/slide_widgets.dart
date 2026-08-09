@@ -114,7 +114,7 @@ class _TitleSlideView extends StatelessWidget {
               'assets/presentation/brand/facet-emblem.png',
               width: 88,
               height: 88,
-              errorBuilder: (_, __, ___) => const Icon(Icons.view_in_ar, size: 72),
+              errorBuilder: (_, _, _) => const Icon(Icons.view_in_ar, size: 72),
             ),
             const SizedBox(height: 28),
             Text(

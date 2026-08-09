@@ -144,7 +144,7 @@ extension ProjectionExtension on Power3DController {
   /// (s00 = Glas-Seite) sind sichtbar und rücken nach.
   Future<void> syncVendingStock(Map<String, int> stockBySlot) async {
     if (!_alive) return;
-    await ensureProjectionHelpers(force: true);
+    await ensureProjectionHelpers();
     await _evalJs('syncVendingStock(${jsonEncode(stockBySlot)})');
   }
 
@@ -199,13 +199,29 @@ extension ProjectionExtension on Power3DController {
   }
 
   /// Studio-Beleuchtung + Environment, damit Metall/Glas in Flutter näher an Blender wirken.
-  Future<void> ensureVendingPresentation() async {
+  ///
+  /// [stabilize] und [applyMaterials] können nach dem ersten Frame nachgezogen werden,
+  /// damit die Kamera schneller sichtbar wird.
+  Future<void> ensureVendingPresentation({
+    bool stabilize = true,
+    bool applyMaterials = true,
+    bool forceHelpers = false,
+  }) async {
     if (!_alive) return;
-    // Helfer immer neu injizieren, damit Hot-Restart Material-JS-Änderungen übernimmt.
-    await ensureProjectionHelpers(force: true);
+    await ensureProjectionHelpers(force: forceHelpers);
     await _evalJs('ensureVendingPresentation()');
-    await _evalJs("applyVendingMaterialStyle('blender_dark')");
-    // Produkte/Spiralen unter __root__ + Bake-Pose (repariert Unparent-Drift).
+    if (applyMaterials) {
+      await _evalJs("applyVendingMaterialStyle('blender_dark')");
+    }
+    if (stabilize) {
+      await _evalJs('stabilizeVendingShelf()');
+    }
+  }
+
+  /// Produkte/Spiralen unter `__root__` + Bake-Pose (repariert Unparent-Drift).
+  Future<void> stabilizeVendingShelf() async {
+    if (!_alive) return;
+    await ensureProjectionHelpers();
     await _evalJs('stabilizeVendingShelf()');
   }
 
@@ -223,7 +239,7 @@ extension ProjectionExtension on Power3DController {
   /// Wechselt Shell-/Glas-Material-Look (`studio_metal` | `enamel` | `matte`).
   Future<void> applyVendingMaterialStyle(String styleId) async {
     if (!_alive) return;
-    await ensureProjectionHelpers(force: true);
+    await ensureProjectionHelpers();
     final id = styleId.replaceAll("'", '');
     await _evalJs("applyVendingMaterialStyle('$id')");
   }

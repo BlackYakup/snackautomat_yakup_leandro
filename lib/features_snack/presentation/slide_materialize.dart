@@ -996,7 +996,6 @@ List<OverlayEl> materializeSlide(PresentationSlide slide) {
       const padL = 36.0;
       const padR = 36.0;
       const padT = 28.0;
-      const padB = 20.0;
       const gap = 18.0;
       final contentW = _dw - padL - padR;
       final colW = (contentW - gap) / 2;

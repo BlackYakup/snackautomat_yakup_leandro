@@ -155,23 +155,46 @@ class Power3DAssetManager {
 
   /// Kopiert ein Flutter-Asset-GLB nach `models/` und gibt eine `http://127.0.0.1`-
   /// URL für Babylon zurück (vermeidet riesiges Base64-IPC und kaputte relative file://-Loads).
+  ///
+  /// Wichtig: Bei Cache-Hit wird das Asset **nicht** erneut aus dem Bundle geladen
+  /// (~85 MB), sonst verdoppelt sich die Startzeit (Bootstrap + loadModel).
   static Future<String> ensureAssetModelUrl(String assetPath) async {
     await prepareAssets();
     final base = await getBaseUrl();
     final name = p.basename(assetPath);
-    final out = File(p.join(base, 'models', name));
-    final byteData = await rootBundle.load(assetPath);
-    final bytes = byteData.buffer.asUint8List(
-      byteData.offsetInBytes,
-      byteData.lengthInBytes,
-    );
-    if (!await out.exists() || await out.length() != bytes.length) {
-      await out.parent.create(recursive: true);
+    final modelsDir = Directory(p.join(base, 'models'));
+    await modelsDir.create(recursive: true);
+    final out = File(p.join(modelsDir.path, name));
+    final meta = File(p.join(modelsDir.path, '$name.assetsize'));
+
+    var needCopy = !await out.exists();
+    if (!needCopy && await meta.exists()) {
+      final expected = int.tryParse((await meta.readAsString()).trim());
+      final actual = await out.length();
+      if (expected == null || expected != actual || actual < 1_000_000) {
+        needCopy = true;
+      }
+    } else if (!needCopy) {
+      // Alte Caches ohne Meta: große Datei vertrauen, sonst neu kopieren.
+      needCopy = (await out.length()) < 1_000_000;
+    }
+
+    if (needCopy) {
+      debugPrint('Power3DAssetManager: Caching model asset $assetPath …');
+      final byteData = await rootBundle.load(assetPath);
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
       await out.writeAsBytes(bytes, flush: true);
+      await meta.writeAsString('${bytes.length}');
       debugPrint(
         'Power3DAssetManager: Cached model ${out.path} (${bytes.length} bytes)',
       );
+    } else {
+      debugPrint('Power3DAssetManager: Using cached model ${out.path}');
     }
+
     final origin = await _modelHttpOrigin();
     return '$origin/$name';
   }

@@ -120,32 +120,16 @@ class _VendingMachine3DLandingScreenState
       setState(() => _statusText = 'Ansicht ausrichten…');
     }
     try {
-      await _controller!.setLights(const [
-        LightingConfig(
-          type: LightType.hemispheric,
-          intensity: 0.45,
-          color: Color(0xFFE8ECF0),
-        ),
-        LightingConfig(
-          type: LightType.directional,
-          intensity: 0.4,
-          color: Color(0xFFFFF4E8),
-        ),
-      ]);
-      await _controller!.updateSceneProcessing(exposure: 0.82, contrast: 1.08);
-      await _controller!.ensureProjectionHelpers(force: true);
-      await _controller!.ensureVendingPresentation();
-      await _controller!.applyVendingMaterialStyle(_materialStyleId);
-      // Blender-Vorderansicht (orthogonal) wie in final_v002.
+      // Schneller Erst-Pfad: Helfer + Studio-Licht + Material einmalig,
+      // Kamera setzen, UI freigeben — Stabilize/Stock danach nachziehen.
+      await _controller!.ensureVendingPresentation(
+        stabilize: false,
+        applyMaterials: true,
+        forceHelpers: true,
+      );
       await _applyCameraView('front', forceLock: true);
-      await _controller!.updateZoomSensitivity(0.55);
-      await _controller!.resetElevatorHome();
       await _controller!.setOrbitLock(true);
-      _bindDispenseHandler();
-      await _syncStockFromProvider();
-      await _syncHudOled(ref.read(vendingSessionProvider));
-      // Kurze Pause, damit die JS-Kamera wirklich sitzt — dann erst einblenden.
-      await Future<void>.delayed(const Duration(milliseconds: 80));
+      await _controller!.updateZoomSensitivity(0.55);
       if (!mounted) return;
       setState(() {
         _cameraReady = true;
@@ -153,6 +137,7 @@ class _VendingMachine3DLandingScreenState
         _orbitLocked = true;
         _statusText = null;
       });
+      unawaited(_finishModelSetup());
     } catch (e) {
       debugPrint('3D camera/lights setup: $e');
       if (mounted) {
@@ -162,6 +147,24 @@ class _VendingMachine3DLandingScreenState
           _statusText = null;
         });
       }
+      unawaited(_finishModelSetup());
+    }
+  }
+
+  /// Nach dem ersten Frame: Shelf stabilisieren, Elevator, Stock, HUD.
+  Future<void> _finishModelSetup() async {
+    final c = _controller;
+    if (c == null) return;
+    try {
+      await c.ensureProjectionHelpers();
+      await c.stabilizeVendingShelf();
+      await c.resetElevatorHome();
+      _bindDispenseHandler();
+      await _syncStockFromProvider();
+      if (!mounted) return;
+      await _syncHudOled(ref.read(vendingSessionProvider));
+    } catch (e) {
+      debugPrint('3D post-load setup: $e');
     }
   }
 

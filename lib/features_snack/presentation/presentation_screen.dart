@@ -41,9 +41,6 @@ class _PresentationScreenState extends State<PresentationScreen> {
   PresentationSlide get _slide =>
       _slides[_index.clamp(0, _slides.length - 1)];
 
-  Set<String> _factoryIdsFor(PresentationSlide slide) =>
-      materializeSlide(slide).map((e) => e.id).toSet();
-
   /// Play und Bearbeiten: immer dieselbe Canvas-Quelle (1:1).
   List<OverlayEl> get _elements {
     if (_editing) {

@@ -23,7 +23,7 @@ class SlideCanvasController extends ChangeNotifier {
       selectedIds.isEmpty ? null : selectedIds.last;
 
   void select(String? id, {bool notify = true}) {
-    final next = <String>{if (id != null) id};
+    final next = <String>{?id};
     if (setEquals(selectedIds, next)) return;
     selectedIds
       ..clear()
@@ -386,7 +386,7 @@ class SlideCanvasState extends State<SlideCanvas> {
   void _syncSelection(String? id, {bool notify = true}) {
     _selectedIds
       ..clear()
-      ..addAll([if (id != null) id]);
+      ..addAll([?id]);
     widget.controller?.select(id, notify: notify);
   }
 
@@ -2555,4 +2555,18 @@ class _MarqueePainter extends CustomPainter {
     final fill = Paint()
       ..color = PresentationTheme.accent.withValues(alpha: 0.12)
       ..style = PaintingStyle.fill;
-    final stroke = Paint
+    final stroke = Paint()
+      ..color = PresentationTheme.accent
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawRect(r, fill);
+    canvas.drawRect(r, stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MarqueePainter oldDelegate) =>
+      oldDelegate.rect != rect;
+}
+
+/// Rückwärtskompatibler Alias.
+typedef SlideEditorLayer = SlideCanvas;
