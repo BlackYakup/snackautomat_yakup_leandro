@@ -1,4 +1,4 @@
-// Folien-Daten der Snackautomat-Präsentation (portiert aus page/slides.ts).
+// Folien-Daten der Snackautomat-Präsentation (In-App).
 
 enum SlideKind { title, explain, diagram, flow, code, status, closing }
 

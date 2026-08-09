@@ -16,6 +16,7 @@ part 'texture_extension.dart';
 part 'animation_extension.dart';
 part 'annotation_extension.dart';
 part 'projection_extension.dart';
+part 'projection_types.dart';
 
 /// Controller zur programmatischen Steuerung des [Power3D]-Viewers.
 ///

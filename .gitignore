@@ -13,9 +13,8 @@
 .swiftpm/
 migrate_working_dir/
 
-# Node (install/regen Cursor SDK, page/)
+# Flutter/Dart related leftovers
 **/node_modules/
-page/.next/
 
 # IntelliJ related
 *.iml
@@ -54,3 +53,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Fresh Windows release output
+/dist/
+

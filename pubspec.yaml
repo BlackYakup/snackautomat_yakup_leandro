@@ -1,5 +1,5 @@
 name: snackautomat_yakup_leandro
-description: "A new Flutter project."
+description: "Snack-/Getränkeautomat mit 3D-Front, Kauf-Session und Admin (Windows)."
 
 publish_to: 'none' 
 
@@ -29,9 +29,6 @@ dependencies:
   pasteboard: ^0.5.0
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  fake_async: ^1.3.3
   build_runner: ^2.15.1
   freezed: ^3.2.5
   json_serializable: ^6.14.0
@@ -46,7 +43,6 @@ flutter:
     - assets/presentation/diagrams/
     - assets/presentation/brand/
     - assets/presentation/status/
-    - assets/presentation/models/presentation_vending.glb
     - assets/products/catalog.json
     - assets/products/bounty_riegel/
     - assets/products/coca_cola_original/
