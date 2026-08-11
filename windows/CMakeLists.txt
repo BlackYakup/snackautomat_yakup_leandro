@@ -18,8 +18,9 @@ endif()
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE INTERNAL "" FORCE)
 
 # Plugin-Header (WebView2) erzeugen harmlose MSVC-Warnungen.
+# /FS: parallele CL.EXE dürfen dieselbe .pdb schreiben (sonst C1041).
 if(MSVC)
-  add_compile_options(/wd4244 /wd4458)
+  add_compile_options(/wd4244 /wd4458 /FS)
 endif()
 
 # Define build configuration option.

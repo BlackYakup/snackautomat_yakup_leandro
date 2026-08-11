@@ -128,7 +128,7 @@ extension ProjectionExtension on Power3DController {
 
   /// Öffnet/schließt die Entnahmeklappe (`Vending_DeliveryFlap_Door`).
   /// Scharnier oben, Boden schwingt nach innen — Klappe bleibt sichtbar.
-  Future<bool> setDeliveryFlapOpen(bool open, {double angleDeg = 42}) async {
+  Future<bool> setDeliveryFlapOpen(bool open, {double angleDeg = 50}) async {
     if (!_alive) return false;
     await ensureProjectionHelpers();
     final raw = await _evalJs(

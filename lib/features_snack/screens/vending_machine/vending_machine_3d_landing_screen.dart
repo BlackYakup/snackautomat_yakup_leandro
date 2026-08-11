@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:power3d/power3d.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/admin_access.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/presentation/presentation_access.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/vending_control_sidebar.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/vending_machine_screen.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/power3d_bootstrap.dart';
@@ -38,7 +37,6 @@ class _VendingMachine3DLandingScreenState
   bool _aligning = false;
   bool _opening2d = false;
   bool _openingAdmin = false;
-  bool _openingPresentation = false;
   bool _orbitLocked = false;
   final String _materialStyleId = 'blender_dark';
   String? _error;
@@ -479,7 +477,7 @@ class _VendingMachine3DLandingScreenState
   }
 
   Future<void> _open2dUi() async {
-    if (_opening2d || _openingAdmin || _openingPresentation || !mounted) {
+    if (_opening2d || _openingAdmin || !mounted) {
       return;
     }
     _opening2d = true;
@@ -498,7 +496,7 @@ class _VendingMachine3DLandingScreenState
   }
 
   Future<void> _openAdmin() async {
-    if (_opening2d || _openingAdmin || _openingPresentation || !mounted) {
+    if (_opening2d || _openingAdmin || !mounted) {
       return;
     }
     _openingAdmin = true;
@@ -508,19 +506,6 @@ class _VendingMachine3DLandingScreenState
     await openAdminArea(context);
     if (!mounted) return;
     _openingAdmin = false;
-    unawaited(_bootstrap());
-  }
-
-  Future<void> _openPresentation() async {
-    if (_opening2d || _openingAdmin || _openingPresentation || !mounted) {
-      return;
-    }
-    _openingPresentation = true;
-    await _suspendViewer(statusText: 'Präsentation…');
-    if (!mounted) return;
-    await openPresentationArea(context);
-    if (!mounted) return;
-    _openingPresentation = false;
     unawaited(_bootstrap());
   }
 
@@ -581,16 +566,9 @@ class _VendingMachine3DLandingScreenState
                 : () => unawaited(_toggleOrbitLock()),
           ),
           IconButton(
-            tooltip: 'Präsentation',
-            icon: const Icon(Icons.slideshow_rounded),
-            onPressed: (_opening2d || _openingAdmin || _openingPresentation)
-                ? null
-                : () => unawaited(_openPresentation()),
-          ),
-          IconButton(
             tooltip: 'Admin',
             icon: const Icon(Icons.admin_panel_settings),
-            onPressed: (_opening2d || _openingAdmin || _openingPresentation)
+            onPressed: (_opening2d || _openingAdmin)
                 ? null
                 : () => unawaited(_openAdmin()),
           ),
@@ -728,7 +706,7 @@ class _VendingMachine3DLandingScreenState
                 icon: Icons.grid_view_rounded,
                 label: '2D',
                 tooltip: 'Zur 2D-Ansicht',
-                enabled: !_opening2d && !_openingAdmin && !_openingPresentation,
+                enabled: !_opening2d && !_openingAdmin,
                 onTap: () => unawaited(_open2dUi()),
               ),
               const SizedBox(width: 10),
