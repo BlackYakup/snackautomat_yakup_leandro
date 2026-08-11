@@ -1,8 +1,8 @@
 part of 'power3d_controller.dart';
 
-/// Texture Management extension for [Power3DController].
+/// Texture-Management-Erweiterung für [Power3DController].
 extension TextureExtension on Power3DController {
-  /// Retrieves the list of all textures in the current scene.
+  /// Ruft die Liste aller Texturen in der aktuellen Szene ab.
   Future<List<Power3DTexture>> getTexturesList() async {
     if (_webViewController == null) return [];
 
@@ -37,7 +37,7 @@ extension TextureExtension on Power3DController {
     }
   }
 
-  /// Gets the base64 encoded image data for a specific texture.
+  /// Liefert die Base64-kodierten Bilddaten einer bestimmten Textur.
   Future<String?> getTextureData(String textureId) async {
     if (_webViewController == null) return null;
 
@@ -49,7 +49,7 @@ extension TextureExtension on Power3DController {
         source: 'requestTextureData("$textureId")',
       );
 
-      // Wait up to 10 seconds for the texture data
+      // Bis zu 10 Sekunden auf die Texturdaten warten
       return await completer.future.timeout(
         const Duration(seconds: 10),
         onTimeout: () {
@@ -64,7 +64,7 @@ extension TextureExtension on Power3DController {
     }
   }
 
-  /// Updates properties of a specific texture.
+  /// Aktualisiert Eigenschaften einer bestimmten Textur.
   Future<void> updateTexture(String textureId, TextureUpdate config) async {
     if (_webViewController == null) return;
 
@@ -73,7 +73,7 @@ extension TextureExtension on Power3DController {
           'updateTextureProperty("$textureId", ${jsonEncode(config.toJson())})',
     );
 
-    // Update local state if the texture exists in the list
+    // Lokalen State aktualisieren, falls die Textur in der Liste existiert
     final newTextures = value.textures.map((t) {
       if (t.uniqueId == textureId) {
         return Power3DTexture(
@@ -95,7 +95,7 @@ extension TextureExtension on Power3DController {
     value = value.copyWith(textures: newTextures);
   }
 
-  /// Exports a texture to a local file.
+  /// Exportiert eine Textur in eine lokale Datei.
   Future<String?> exportTexture(String textureId, String path) async {
     final base64Data = await getTextureData(textureId);
     if (base64Data == null) return null;

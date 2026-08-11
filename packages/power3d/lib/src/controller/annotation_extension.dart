@@ -1,7 +1,7 @@
 part of 'power3d_controller.dart';
 
 extension AnnotationExtension on Power3DController {
-  /// Sets the JSON string representing the annotations.
+  /// Setzt den JSON-String mit den Annotationen.
   void setAnnotations(String json) {
     debugPrint('Power3D: setAnnotations called (length: ${json.length})');
     value = value.copyWith(annotations: json);
@@ -15,12 +15,12 @@ extension AnnotationExtension on Power3DController {
     }
   }
 
-  /// Sets the annotation style.
+  /// Setzt den Annotationsstil.
   ///
-  /// [style] can be:
-  /// - A raw HTML/CSS/JS string to be injected.
-  /// - A path to a local JavaScript style file.
-  /// - A custom type (like an Enum) handled by the `onResolveStyle` hook.
+  /// [style] kann sein:
+  /// - Ein roher HTML/CSS/JS-String zum Injizieren.
+  /// - Ein Pfad zu einer lokalen JavaScript-Stil-Datei.
+  /// - Ein eigener Typ (z. B. Enum), der vom Hook `onResolveStyle` behandelt wird.
   void setAnnotationStyle(dynamic style, {bool force = false}) {
     final bool changed = value.annotationStyle != style;
     if (changed) {
@@ -36,12 +36,12 @@ extension AnnotationExtension on Power3DController {
         );
       }
     } else {
-      // Provisioning style files requires the engine's assets to be ready. 
-      // If we're not initialized yet, we just keep the style in state.
-      // The initialize() method will call this again once ready.
+      // Das Bereitstellen von Stil-Dateien erfordert bereite Engine-Assets.
+      // Wenn noch nicht initialisiert, behalten wir den Stil nur im State.
+      // Die Methode initialize() ruft dies erneut auf, sobald bereit.
       if (!value.isInitialized && !force) return;
 
-      // It's likely an Enum or custom Style object. Check local hook, then global.
+      // Wahrscheinlich ein Enum oder eigenes Style-Objekt. Zuerst lokalen Hook, dann global prüfen.
       if (onResolveStyle != null) {
         unawaited(onResolveStyle!(style));
       } else if (Power3DController.globalStyleResolver != null) {
@@ -54,7 +54,7 @@ extension AnnotationExtension on Power3DController {
     }
   }
 
-  /// Toggles visibility of all annotations.
+  /// Schaltet die Sichtbarkeit aller Annotationen um.
   void toggleAnnotations(bool visible) {
     if (value.isInitialized) {
       unawaited(
@@ -65,11 +65,11 @@ extension AnnotationExtension on Power3DController {
     }
   }
 
-  /// Smoothly transitions the camera to a specific orbit and target.
+  /// Bewegt die Kamera sanft zu einer bestimmten Orbit- und Zielposition.
   /// 
-  /// [orbit]: List of [Alpha, Beta, Radius] camera angles.
-  /// [target]: List of [X, Y, Z] world coordinates.
-  /// [duration]: The time in seconds for the flight transition.
+  /// [orbit]: Liste der Kamerawinkel [Alpha, Beta, Radius].
+  /// [target]: Liste der Weltkoordinaten [X, Y, Z].
+  /// [duration]: Dauer der Flug-Übergangsanimation in Sekunden.
   void focusCamera({
     required List<double> orbit,
     required List<double> target,

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path/path.dart' as p;
 import 'dart:async';
 import '../models/power3d_model.dart';
+import 'asset_manager.dart';
 
 part 'view_extension.dart';
 part 'selection_extension.dart';
@@ -15,26 +15,29 @@ part 'material_extension.dart';
 part 'texture_extension.dart';
 part 'animation_extension.dart';
 part 'annotation_extension.dart';
+part 'projection_extension.dart';
+part 'projection_types.dart';
 
-/// Controller for programmatically managing the [Power3D] viewer.
+/// Controller zur programmatischen Steuerung des [Power3D]-Viewers.
 ///
-/// Use this to load models, change materials, capture screenshots,
-/// manage lighting, and control the camera.
+/// Damit kannst du Modelle laden, Materialien ändern, Screenshots aufnehmen,
+/// die Beleuchtung verwalten und die Kamera steuern.
 class Power3DController extends ValueNotifier<Power3DState> {
-  /// Creates a new [Power3DController] with initial state.
+  /// Erstellt einen neuen [Power3DController] mit Initialzustand.
   Power3DController() : super(Power3DState.initial());
 
   InAppWebViewController? _webViewController;
 
   bool _isDisposed = false;
+  bool _projectionHelpersInjected = false;
   final Map<String, Completer<String?>> _textureCompleters = {};
   String? _pendingScreenshotPath;
   Function(String partName, bool selected)? _onPartSelectedCallback;
-  /// Triggered when an annotation's 'Learn More' or 'Details' button is clicked.
-  /// Relayed from the JavaScript bridge.
+  /// Wird ausgelöst, wenn der Button „Learn More“ oder „Details“ einer Annotation angeklickt wird.
+  /// Weitergeleitet aus der JavaScript-Bridge.
   Function(String id, Map<String, dynamic> data)? onAnnotationMoreCallback;
 
-  /// A customizable hook for resolving non-string annotation styles.
+  /// Anpassbarer Hook zum Auflösen nicht-stringbasierter Annotationsstile.
   static Future<void> Function(Power3DController controller, dynamic style)? globalStyleResolver;
 
   Future<void> Function(dynamic style)? _onResolveStyle;
@@ -43,42 +46,55 @@ class Power3DController extends ValueNotifier<Power3DState> {
     if (_onResolveStyle == hook) return;
     _onResolveStyle = hook;
     
-    // If we just got a hook and there's a pending non-string style (enum/object), resolve it!
+    // Wenn gerade ein Hook gesetzt wurde und ein ausstehender Nicht-String-Stil (Enum/Objekt) vorliegt, auflösen!
     if (hook != null && value.annotationStyle != null && value.annotationStyle is! String) {
       setAnnotationStyle(value.annotationStyle);
     }
   }
 
-  /// Internal method to set the WebView controller.
-  /// This should only be used by the Power3D widget.
+  /// Interne Methode zum Setzen des WebView-Controllers.
+  /// Sollte nur vom Power3D-Widget verwendet werden.
   @internal
   void setWebViewController(InAppWebViewController controller) {
     _webViewController = controller;
   }
 
-  /// Internal initialization logic that synchronizes the default [Power3DState] 
-  /// with the underlying Babylon.js engine once the WebView is ready.
+  bool get _alive =>
+      !_isDisposed && _webViewController != null && value.isInitialized;
+
+  Future<dynamic> _evalJs(String source) async {
+    if (_webViewController == null || _isDisposed) return null;
+    try {
+      return await _webViewController!.evaluateJavascript(source: source);
+    } catch (error) {
+      debugPrint('Power3D _evalJs failed: $error');
+      return null;
+    }
+  }
+
+  /// Interne Initialisierungslogik, die den Standard-[Power3DState]
+  /// mit der darunterliegenden Babylon.js-Engine synchronisiert, sobald die WebView bereit ist.
   /// 
-  /// This applies initial lighting, materials, shading modes, and 
-  /// selection configurations.
+  /// Dabei werden initiale Beleuchtung, Materialien, Schattierungsmodi und
+  /// Selection-Konfigurationen angewendet.
   void initialize() {
     if (value.isInitialized) return;
     value = value.copyWith(isInitialized: true);
 
-    // Apply initial lighting
+    // Initiale Beleuchtung anwenden
     setLights(value.lights);
     updateSceneProcessing(exposure: value.exposure, contrast: value.contrast);
 
-    // Apply initial materials/shading
+    // Initiale Materialien/Schattierung anwenden
     setShadingMode(value.shadingMode);
     if (value.globalMaterial != null) {
       setGlobalMaterial(value.globalMaterial!);
     }
 
-    // Apply selection configuration
+    // Selection-Konfiguration anwenden
     updateSelectionConfig(value.selectionConfig);
 
-    // Apply initial annotations
+    // Initiale Annotationen anwenden
     if (value.annotations != null) {
       debugPrint(
         'Power3D: initialize - applying ${value.annotations!.length} chars of annotation data',
@@ -89,7 +105,7 @@ class Power3DController extends ValueNotifier<Power3DState> {
       setAnnotationStyle(value.annotationStyle!, force: true);
     }
 
-    // Sync camera position
+    // Kameraposition synchronisieren
     unawaited(
       _webViewController?.evaluateJavascript(
         source:
@@ -97,15 +113,15 @@ class Power3DController extends ValueNotifier<Power3DState> {
       ),
     );
 
-    // Apply initial zoom sensitivity
+    // Initiale Zoom-Empfindlichkeit anwenden
     unawaited(updateZoomSensitivity(value.zoomSensitivity));
   }
 
-  /// Loads a 3D model into the scene.
+  /// Lädt ein 3D-Modell in die Szene.
   /// 
-  /// The [data] parameter specifies the source (Asset, Network, or File).
-  /// For large models, this method handles Base64 encoding for local files
-  /// and direct URL loading for network sources.
+  /// Der Parameter [data] gibt die Quelle an (Asset, Netzwerk oder Datei).
+  /// Bei großen Modellen übernimmt diese Methode Base64-Kodierung für lokale Dateien
+  /// und direktes URL-Laden für Netzwerkquellen.
   Future<void> loadModel(Power3DData data) async {
     if (!value.isInitialized || _webViewController == null) return;
 
@@ -115,35 +131,30 @@ class Power3DController extends ValueNotifier<Power3DState> {
     );
 
     try {
-      String? encodedData;
+      String encodedData;
       String type = 'url';
       String fileName = data.fileName ?? p.basename(data.path);
 
       switch (data.source) {
         case Power3DSource.asset:
-          final byteData = await rootBundle.load(data.path);
-          final bytes = byteData.buffer.asUint8List();
-          encodedData = base64Encode(bytes);
-          type = 'base64';
+          // Relative URL neben index.html — deutlich schneller als ~85MB Base64-IPC.
+          encodedData = await Power3DAssetManager.ensureAssetModelUrl(data.path);
+          type = 'url';
           break;
         case Power3DSource.network:
           encodedData = data.path;
           type = 'url';
           break;
         case Power3DSource.file:
-          final file = File(data.path);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            encodedData = base64Encode(bytes);
-            type = 'base64';
-          } else {
-            throw Exception("File not found: ${data.path}");
-          }
+          encodedData = await Power3DAssetManager.ensureFileModelUrl(data.path);
+          type = 'url';
           break;
       }
 
+      final safeUrl = encodedData.replaceAll(r'\', '/').replaceAll('"', r'\"');
+      final safeName = fileName.replaceAll('"', r'\"');
       await _webViewController!.evaluateJavascript(
-        source: 'loadModel("$encodedData", "$fileName", "$type")',
+        source: 'loadModel("$safeUrl", "$safeName", "$type")',
       );
     } catch (e) {
       value = value.copyWith(
@@ -153,8 +164,8 @@ class Power3DController extends ValueNotifier<Power3DState> {
     }
   }
 
-  /// The primary communication bridge that receives raw JSON messages 
-  /// from the JavaScript engine and translates them into [Power3DState] updates.
+  /// Die primäre Kommunikationsbrücke, die rohe JSON-Nachrichten
+  /// von der JavaScript-Engine empfängt und in [Power3DState]-Updates übersetzt.
   @internal
   void handleWebViewMessage(String message) {
     try {
@@ -162,21 +173,21 @@ class Power3DController extends ValueNotifier<Power3DState> {
       if (data['type'] == 'status') {
         if (data['message'] == 'loaded') {
           value = value.copyWith(status: Power3DStatus.loaded);
-          // Re-apply materials and shading after model load
+          // Materialien und Schattierung nach dem Modellladen erneut anwenden
           setShadingMode(value.shadingMode);
           if (value.globalMaterial != null) {
             setGlobalMaterial(value.globalMaterial!);
           }
-          // Re-apply selection configuration
+          // Selection-Konfiguration erneut anwenden
           updateSelectionConfig(value.selectionConfig);
-          // Sync camera position
+          // Kameraposition synchronisieren
           unawaited(
             _webViewController?.evaluateJavascript(
               source:
                   'setCameraPosition(${value.cameraAlpha}, ${value.cameraBeta}, ${value.cameraRadius})',
             ),
           );
-          // Initialize animations
+          // Animationen initialisieren
           unawaited(
             _webViewController?.evaluateJavascript(source: 'initAnimations()'),
           );
@@ -186,13 +197,13 @@ class Power3DController extends ValueNotifier<Power3DState> {
             hiddenParts: [],
             boundingBoxParts: [],
           );
-          // Refresh animations list to sync isPlaying status
+          // Animationsliste aktualisieren, um isPlaying-Status zu synchronisieren
           unawaited(getAnimationsList());
         } else if (data['message'] == 'loading') {
           value = value.copyWith(status: Power3DStatus.loading);
         }
       } else if (data['type'] == 'statusChange') {
-        // Internal status updates from JS (e.g. rotation stopped)
+        // Interne Status-Updates von JS (z. B. Rotation gestoppt)
         final key = data['key'];
         final val = data['value'];
         if (key == 'autoRotate') {
@@ -259,7 +270,7 @@ class Power3DController extends ValueNotifier<Power3DState> {
         onAnnotationMoreCallback?.call(id, annotationData);
       }
     } catch (e) {
-      // Ignore parse errors from JS
+      // Parse-Fehler von JS ignorieren
     }
   }
 
@@ -268,33 +279,33 @@ class Power3DController extends ValueNotifier<Power3DState> {
   @override
   Power3DState get value => _pendingValue ?? super.value;
 
-  /// Updates the controller's state.
+  /// Aktualisiert den Zustand des Controllers.
   /// 
-  /// This override ensures that notifications are handled safely, especially
-  /// when triggered by asynchronous WebView events that might arrive during
-  /// a Flutter build phase. 
+  /// Dieser Override stellt sicher, dass Benachrichtigungen sicher behandelt werden,
+  /// insbesondere wenn asynchrone WebView-Ereignisse während einer Flutter-Build-Phase
+  /// eintreffen.
   /// 
-  /// We use a "pending value" pattern to keep state updates synchronous for
-  /// sequential logic (like initialization) while deferring the actual 
-  /// notifications to the next microtask when the framework is busy building.
+  /// Wir nutzen ein „Pending-Value“-Muster, damit State-Updates für sequenzielle Logik
+  /// (z. B. Initialisierung) synchron bleiben, während die eigentlichen
+  /// Benachrichtigungen auf den nächsten Microtask verschoben werden, wenn das Framework busy ist.
   @override
   set value(Power3DState newValue) {
     if (_isDisposed || value == newValue) return;
 
     final widgetsBinding = WidgetsBinding.instance;
-    // SchedulerPhase.persistentCallbacks matches build, layout, and paint phases.
+    // SchedulerPhase.persistentCallbacks entspricht Build-, Layout- und Paint-Phasen.
     if (widgetsBinding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
       if (_pendingValue == null) {
         scheduleMicrotask(() {
           if (!_isDisposed && _pendingValue != null) {
             final val = _pendingValue!;
             _pendingValue = null;
-            // super.value = val triggers notifyListeners() outside the build phase.
+            // super.value = val löst notifyListeners() außerhalb der Build-Phase aus.
             super.value = val;
           }
         });
       }
-      _pendingValue = newValue; // Update immediately for local controller logic.
+      _pendingValue = newValue; // Sofort aktualisieren für lokale Controller-Logik.
     } else {
       _pendingValue = null;
       super.value = newValue;
@@ -312,7 +323,7 @@ class Power3DController extends ValueNotifier<Power3DState> {
     super.dispose();
   }
 
-  /// Gets the data for a specific annotation by its [id].
+  /// Holt die Daten einer bestimmten Annotation anhand ihrer [id].
   Future<Map<String, dynamic>?> getAnnotationData(String id) async {
     if (!value.isInitialized || _webViewController == null) return null;
     try {

@@ -1,5 +1,5 @@
 name: snackautomat_yakup_leandro
-description: "A new Flutter project."
+description: "Snack-/Getränkeautomat mit 3D-Front, Kauf-Session und Admin (Windows)."
 
 publish_to: 'none' 
 
@@ -16,9 +16,9 @@ dependencies:
   json_annotation: ^4.12.0
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.3.2
-  sqflite: ^2.4.3
+  sqflite: ^2.4.2+1
   path: ^1.9.1
-  sqflite_common_ffi: ^2.4.2
+  sqflite_common_ffi: ">=2.4.0 <2.4.1"
   file_picker: ^8.1.7
   path_provider: ^2.1.5
   power3d:
@@ -27,9 +27,6 @@ dependencies:
   flutter_inappwebview: ^6.1.5
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  fake_async: ^1.3.3
   build_runner: ^2.15.1
   freezed: ^3.2.5
   json_serializable: ^6.14.0
@@ -38,3 +35,54 @@ dev_dependencies:
 flutter:
 
   uses-material-design: true
+
+  assets:
+    - assets/models/vending_machine_front.glb
+    - assets/products/catalog.json
+    - assets/products/bounty_riegel/
+    - assets/products/coca_cola_original/
+    - assets/products/coca_cola_zero/
+    - assets/products/fanta_orange/
+    - assets/products/gerolsteiner_medium/
+    - assets/products/gerolsteiner_naturell/
+    - assets/products/gerolsteiner_sprudel/
+    - assets/products/haribo_pico_bella/
+    - assets/products/haribo_tropifrutti/
+    - assets/products/lays_naturel/
+    - assets/products/lays_sour_cream_onion/
+    - assets/products/lays_spanish_tango/
+    - assets/products/leibniz_kunterbunt_choco/
+    - assets/products/leibniz_minis_choco/
+    - assets/products/lift_apfelschorle/
+    - assets/products/lorenz_erdnuesse/
+    - assets/products/lorenz_nicnacs/
+    - assets/products/lorenz_saltletts_mini/
+    - assets/products/mammut_protein_cookie/
+    - assets/products/manner_original_neapolitaner/
+    - assets/products/mars_riegel/
+    - assets/products/mezzo_mix/
+    - assets/products/mio_mio_mate_original/
+    - assets/products/mms_chocolate/
+    - assets/products/mms_crispy/
+    - assets/products/mms_peanut/
+    - assets/products/myprotein_baked_brownie/
+    - assets/products/myprotein_baked_cookie/
+    - assets/products/myprotein_brownie_chocolate/
+    - assets/products/myprotein_brownie_weiss/
+    - assets/products/myprotein_crispy_layered/
+    - assets/products/myprotein_filled_cookie/
+    - assets/products/myprotein_impact_bar/
+    - assets/products/myprotein_layered_treat_bar/
+    - assets/products/myprotein_xtra_protein_bar/
+    - assets/products/paulaner_spezi/
+    - assets/products/pfanner_icetea_pfirsich/
+    - assets/products/pfanner_icetea_zitrone/
+    - assets/products/red_bull_energy/
+    - assets/products/red_bull_sugarfree/
+    - assets/products/red_bull_sugarfree_white_peach/
+    - assets/products/rewe_milder_multi/
+    - assets/products/ritter_sport_edel_vollmilch/
+    - assets/products/ritter_sport_haselnuss/
+    - assets/products/snickers_riegel/
+    - assets/products/sprite/
+    - assets/products/twix/

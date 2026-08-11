@@ -1,15 +1,15 @@
 part of 'power3d_controller.dart';
 
-/// Selection and Hierarchy extension for [Power3DController].
+/// Selection- und Hierarchy-Erweiterung für [Power3DController].
 extension SelectionExtension on Power3DController {
-  /// Registers a callback for part selection events.
+  /// Registriert einen Callback für Teil-Auswahl-Ereignisse.
   ///
-  /// The callback is triggered whenever a part is selected or deselected.
+  /// Der Callback wird ausgelöst, wenn ein Teil ausgewählt oder abgewählt wird.
   void onPartSelected(Function(String partName, bool selected) callback) {
     _onPartSelectedCallback = callback;
   }
 
-  /// Retrieves the list of available mesh part names from the currently loaded model.
+  /// Ruft die Liste der verfügbaren Mesh-Teilnamen aus dem aktuell geladenen Modell ab.
   Future<List<String>> getPartsList() async {
     if (_webViewController == null) return [];
 
@@ -83,7 +83,7 @@ extension SelectionExtension on Power3DController {
         .toList();
   }
 
-  /// Focuses and selects a specific part by its mesh [partName].
+  /// Fokussiert und wählt ein bestimmtes Teil anhand seines Mesh-[partName] aus.
   Future<void> selectPart(String partName) async {
     if (_webViewController == null) return;
 
@@ -101,7 +101,7 @@ extension SelectionExtension on Power3DController {
     }
   }
 
-  /// Deselects a specific part by its mesh [partName].
+  /// Hebt die Auswahl eines bestimmten Teils anhand seines Mesh-[partName] auf.
   Future<void> unselectPart(String partName) async {
     if (_webViewController == null) return;
 
@@ -114,7 +114,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(selectedParts: newSelected);
   }
 
-  /// Clears all currently selected model parts.
+  /// Löscht alle aktuell ausgewählten Modellteile.
   Future<void> clearSelection() async {
     if (_webViewController == null) return;
 
@@ -122,7 +122,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(selectedParts: []);
   }
 
-  /// Updates the global selection configuration, including styles and behavior.
+  /// Aktualisiert die globale Selection-Konfiguration inkl. Stile und Verhalten.
   Future<void> updateSelectionConfig(SelectionConfig config) async {
     value = value.copyWith(selectionConfig: config);
 
@@ -170,12 +170,12 @@ extension SelectionExtension on Power3DController {
     );
   }
 
-  // ===== Hierarchy & Node Extras =====
+  // ===== Hierarchie & Node-Extras =====
 
-  /// Retrieves the hierarchical structure of parts in the model.
+  /// Ruft die hierarchische Struktur der Teile im Modell ab.
   ///
-  /// [useCategorization]: If true, uses naming conventions like "Category.PartName".
-  /// If false (default), uses the GLTF scene graph parent-child relationships.
+  /// [useCategorization]: Wenn true, werden Namenskonventionen wie „Category.PartName“ verwendet.
+  /// Wenn false (Standard), werden die Parent-Child-Beziehungen des GLTF-Szenengraphen genutzt.
   Future<List<dynamic>> getPartsHierarchy({
     bool useCategorization = false,
   }) async {
@@ -187,14 +187,14 @@ extension SelectionExtension on Power3DController {
       );
 
       String resultString = result.toString();
-      // WebView results are often wrapped in extra quotes and escaped
+      // WebView-Ergebnisse sind oft in zusätzliche Anführungszeichen gepackt und escaped
       if (resultString.startsWith('"') && resultString.endsWith('"')) {
         try {
-          // Decode the outer string wrapper
+          // Äußeren String-Wrapper dekodieren
           final decoded = jsonDecode(resultString);
           resultString = decoded.toString();
         } catch (e) {
-          // If decoding fails, fallback to removing leading/trailing quotes if they exist
+          // Bei Fehlschlag führende/trailing Anführungszeichen entfernen, falls vorhanden
           resultString = resultString
               .substring(1, resultString.length - 1)
               .replaceAll('\\"', '"');
@@ -212,9 +212,9 @@ extension SelectionExtension on Power3DController {
     }
   }
 
-  /// Gets extras data from a specific node/part (label, description, category, etc.).
+  /// Holt Extras-Daten eines bestimmten Knotens/Teils (Label, Beschreibung, Kategorie usw.).
   ///
-  /// Returns a map containing metadata and GLTF extras if available.
+  /// Gibt eine Map mit Metadaten und GLTF-Extras zurück, falls vorhanden.
   Future<Map<String, dynamic>> getNodeExtras(String partName) async {
     if (_webViewController == null) return {};
 
@@ -244,9 +244,9 @@ extension SelectionExtension on Power3DController {
     }
   }
 
-  // ===== Visibility Controls =====
+  // ===== Sichtbarkeitssteuerung =====
 
-  /// Hides the specified parts from view.
+  /// Blendet die angegebenen Teile aus.
   Future<void> hideParts(List<String> partNames) async {
     if (_webViewController == null) return;
 
@@ -261,7 +261,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(hiddenParts: newHidden);
   }
 
-  /// Shows the specified parts (makes them visible).
+  /// Zeigt die angegebenen Teile an (macht sie sichtbar).
   Future<void> showParts(List<String> showPartNames) async {
     if (_webViewController == null) return;
 
@@ -274,7 +274,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(hiddenParts: newHidden);
   }
 
-  /// Hides all currently selected parts.
+  /// Blendet alle aktuell ausgewählten Teile aus.
   Future<void> hideSelected() async {
     if (_webViewController == null) return;
 
@@ -287,7 +287,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(hiddenParts: newHidden);
   }
 
-  /// Hides all parts except the currently selected ones.
+  /// Blendet alle Teile außer den aktuell ausgewählten aus.
   Future<void> hideUnselected() async {
     if (_webViewController == null) return;
 
@@ -299,7 +299,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(hiddenParts: unselected);
   }
 
-  /// Shows all parts (unhides everything).
+  /// Zeigt alle Teile an (blendet alles wieder ein).
   Future<void> unhideAll() async {
     if (_webViewController == null) return;
 
@@ -307,12 +307,12 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(hiddenParts: []);
   }
 
-  // ===== Bounding Box Visualization =====
+  // ===== Bounding-Box-Visualisierung =====
 
-  /// Shows bounding boxes around the specified parts.
+  /// Zeigt Bounding Boxes um die angegebenen Teile.
   ///
-  /// [partNames]: List of part names to show bounding boxes for.
-  /// [config]: Optional configuration for appearance (color, line width, etc.).
+  /// [partNames]: Liste der Teilnamen, für die Bounding Boxes angezeigt werden.
+  /// [config]: Optionale Konfiguration für das Aussehen (Farbe, Linienbreite usw.).
   Future<void> showBoundingBox(
     List<String> partNames, {
     BoundingBoxConfig? config,
@@ -342,7 +342,7 @@ extension SelectionExtension on Power3DController {
     value = value.copyWith(boundingBoxParts: newBoxes);
   }
 
-  /// Hides bounding boxes for the specified parts.
+  /// Blendet Bounding Boxes für die angegebenen Teile aus.
   Future<void> hideBoundingBox(List<String> partNames) async {
     if (_webViewController == null) return;
 

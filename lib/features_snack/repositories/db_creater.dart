@@ -1,4 +1,5 @@
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/database_factory_config.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migrations.dart';
 import 'package:sqflite/sqflite.dart';
@@ -25,7 +26,7 @@ class DbCreater {
     final databasePath = await getDatabasesPath();
     final path = join(databasePath, "snackautomat.db");
 
-    print('SQLite-Datenbank: $path');
+    debugPrint('SQLite-Datenbank: $path');
 
     return await openDatabase(
       path,

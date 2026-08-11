@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/placed_product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/empty_slot.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/product_tile.dart';
 
@@ -12,8 +12,8 @@ class ProductRow extends StatelessWidget {
   });
 
   final String rowLabel;
-  final List<Product> products;
-  final Product? selectedProduct;
+  final List<PlacedProduct> products;
+  final PlacedProduct? selectedProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +61,7 @@ class ProductRow extends StatelessWidget {
     );
   }
 
-  Product? _productStartingAt(String rowLabel, int columnNumber) {
+  PlacedProduct? _productStartingAt(String rowLabel, int columnNumber) {
     for (final product in products) {
       if (product.rowLabel.toUpperCase() == rowLabel &&
           product.columnNumber == columnNumber) {
@@ -72,7 +72,7 @@ class ProductRow extends StatelessWidget {
     return null;
   }
 
-  bool _isSameProduct(Product product, Product? selectedProduct) {
+  bool _isSameProduct(PlacedProduct product, PlacedProduct? selectedProduct) {
     if (selectedProduct == null) {
       return false;
     }

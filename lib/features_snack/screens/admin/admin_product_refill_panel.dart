@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/placed_product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_visual.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_theme.dart';
@@ -14,9 +14,9 @@ class AdminProductRefillPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final productsAsync = ref.watch(productControllerProvider);
+    final placedAsync = ref.watch(placedProductsProvider);
 
-    return productsAsync.when(
+    return placedAsync.when(
       loading: () => const Center(
         child: CircularProgressIndicator(color: AdminColors.accent),
       ),
@@ -25,7 +25,7 @@ class AdminProductRefillPanel extends ConsumerWidget {
         title: 'Raster nicht verfügbar',
         message: '$error',
       ),
-      data: (products) {
+      data: (placed) {
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -60,27 +60,23 @@ class AdminProductRefillPanel extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SizedBox(
-                          height: 520,
-                          child: Column(
-                            children: _rowLabels.map((rowLabel) {
-                              return Expanded(
-                                child: _RefillProductRow(
-                                  rowLabel: rowLabel,
-                                  products: products,
-                                  onProductTap: (product) => _openRefillDialog(
-                                    context,
-                                    ref,
-                                    product,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      },
+                    SizedBox(
+                      height: 520,
+                      child: Column(
+                        children: _rowLabels.map((rowLabel) {
+                          return Expanded(
+                            child: _RefillProductRow(
+                              rowLabel: rowLabel,
+                              placed: placed,
+                              onProductTap: (entry) => _openRefillDialog(
+                                context,
+                                ref,
+                                entry,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ],
                 ),
@@ -114,27 +110,25 @@ class AdminProductRefillPanel extends ConsumerWidget {
   Future<void> _openRefillDialog(
     BuildContext context,
     WidgetRef ref,
-    Product product,
+    PlacedProduct placed,
   ) async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return _RefillDialog(
-          product: product,
+          placed: placed,
           onRefill: (amount) async {
             await ref
-                .read(productControllerProvider.notifier)
-                .increaseStockBy(product, amount);
+                .read(placedProductsProvider.notifier)
+                .increaseStockBy(placed, amount);
           },
           onRefillToMax: () async {
-            await ref
-                .read(productControllerProvider.notifier)
-                .refillToMax(product);
+            await ref.read(placedProductsProvider.notifier).refillToMax(placed);
           },
           onSetStock: (stock) async {
             await ref
-                .read(productControllerProvider.notifier)
-                .setStockQuantity(product, stock);
+                .read(placedProductsProvider.notifier)
+                .setStockQuantity(placed, stock);
           },
         );
       },
@@ -145,13 +139,13 @@ class AdminProductRefillPanel extends ConsumerWidget {
 class _RefillProductRow extends StatelessWidget {
   const _RefillProductRow({
     required this.rowLabel,
-    required this.products,
+    required this.placed,
     required this.onProductTap,
   });
 
   final String rowLabel;
-  final List<Product> products;
-  final ValueChanged<Product> onProductTap;
+  final List<PlacedProduct> placed;
+  final ValueChanged<PlacedProduct> onProductTap;
 
   @override
   Widget build(BuildContext context) {
@@ -173,9 +167,9 @@ class _RefillProductRow extends StatelessWidget {
     var column = 1;
 
     while (column <= _columnCount) {
-      final product = _productStartingAt(rowLabel, column);
+      final entry = _productStartingAt(rowLabel, column);
 
-      if (product == null) {
+      if (entry == null) {
         children.add(
           Expanded(
             child: _RefillEmptySlot(slotLabel: '$rowLabel$column'),
@@ -185,14 +179,14 @@ class _RefillProductRow extends StatelessWidget {
       } else {
         children.add(
           Expanded(
-            flex: product.slotWidth,
+            flex: entry.slotWidth,
             child: _RefillProductSlot(
-              product: product,
-              onTap: () => onProductTap(product),
+              placed: entry,
+              onTap: () => onProductTap(entry),
             ),
           ),
         );
-        column += product.slotWidth;
+        column += entry.slotWidth;
       }
     }
 
@@ -202,11 +196,11 @@ class _RefillProductRow extends StatelessWidget {
     );
   }
 
-  Product? _productStartingAt(String rowLabel, int columnNumber) {
-    for (final product in products) {
-      if (product.rowLabel.toUpperCase() == rowLabel &&
-          product.columnNumber == columnNumber) {
-        return product;
+  PlacedProduct? _productStartingAt(String rowLabel, int columnNumber) {
+    for (final entry in placed) {
+      if (entry.rowLabel.toUpperCase() == rowLabel &&
+          entry.columnNumber == columnNumber) {
+        return entry;
       }
     }
 
@@ -216,18 +210,18 @@ class _RefillProductRow extends StatelessWidget {
 
 class _RefillProductSlot extends StatelessWidget {
   const _RefillProductSlot({
-    required this.product,
+    required this.placed,
     required this.onTap,
   });
 
-  final Product product;
+  final PlacedProduct placed;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final slotLabel = '${product.rowLabel}${product.columnNumber}';
-    final stockColor = _stockLevelColor(product);
-    final needsRefill = product.stockQuantity <= 2;
+    final slotLabel = placed.slotCode;
+    final stockColor = _stockLevelColor(placed);
+    final needsRefill = placed.stockQuantity <= 2;
 
     return Padding(
       padding: const EdgeInsets.only(right: 6),
@@ -259,12 +253,12 @@ class _RefillProductSlot extends StatelessWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.topLeft,
               child: SizedBox(
-                width: product.slotWidth == 2 ? 170 : 90,
+                width: placed.slotWidth == 2 ? 170 : 90,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ProductVisualAvatar(product: product, size: 24),
+                    ProductVisualAvatar(product: placed.product, size: 24),
                     const SizedBox(height: 4),
                     Text(
                       slotLabel,
@@ -274,17 +268,17 @@ class _RefillProductSlot extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      product.name,
+                      placed.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 11),
                     ),
                     Text(
-                      formatCents(product.priceCents),
+                      formatCents(placed.priceCents),
                       style: const TextStyle(fontSize: 11),
                     ),
                     Text(
-                      '${product.stockQuantity} von ${product.maxCapacity}',
+                      '${placed.stockQuantity} von ${placed.maxCapacity}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -375,12 +369,12 @@ class _LegendItem extends StatelessWidget {
   }
 }
 
-Color _stockLevelColor(Product product) {
-  if (product.isSoldOut || product.stockQuantity <= 2) {
+Color _stockLevelColor(PlacedProduct placed) {
+  if (placed.isSoldOut || placed.stockQuantity <= 2) {
     return AdminColors.danger;
   }
 
-  if (product.stockQuantity <= product.maxCapacity * 0.5) {
+  if (placed.stockQuantity <= placed.maxCapacity * 0.5) {
     return AdminColors.warning;
   }
 
@@ -389,13 +383,13 @@ Color _stockLevelColor(Product product) {
 
 class _RefillDialog extends StatefulWidget {
   const _RefillDialog({
-    required this.product,
+    required this.placed,
     required this.onRefill,
     required this.onRefillToMax,
     required this.onSetStock,
   });
 
-  final Product product;
+  final PlacedProduct placed;
   final Future<void> Function(int amount) onRefill;
   final Future<void> Function() onRefillToMax;
   final Future<void> Function(int stock) onSetStock;
@@ -411,15 +405,15 @@ class _RefillDialogState extends State<_RefillDialog> {
   @override
   void initState() {
     super.initState();
-    _stock = widget.product.stockQuantity;
+    _stock = widget.placed.stockQuantity;
   }
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
-    final slotLabel = '${product.rowLabel}${product.columnNumber}';
-    final stockColor = _stockLevelColor(product.copyWith(stockQuantity: _stock));
-    final missing = product.maxCapacity - _stock;
+    final placed = widget.placed;
+    final slotLabel = placed.slotCode;
+    final stockColor = _stockLevelColor(placed.copyWithStock(_stock));
+    final missing = placed.maxCapacity - _stock;
 
     return Dialog(
       child: ConstrainedBox(
@@ -429,10 +423,10 @@ class _RefillDialogState extends State<_RefillDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ProductVisualAvatar(product: product, size: 72),
+              ProductVisualAvatar(product: placed.product, size: 72),
               const SizedBox(height: 14),
               Text(
-                product.name,
+                placed.name,
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
@@ -443,7 +437,7 @@ class _RefillDialogState extends State<_RefillDialog> {
               ),
               const SizedBox(height: 16),
               Text(
-                '$_stock von ${product.maxCapacity}',
+                '$_stock von ${placed.maxCapacity}',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -480,7 +474,7 @@ class _RefillDialogState extends State<_RefillDialog> {
                   _RoundActionButton(
                     icon: Icons.add,
                     highlighted: true,
-                    onPressed: _isSaving || _stock >= product.maxCapacity
+                    onPressed: _isSaving || _stock >= placed.maxCapacity
                         ? null
                         : () => setState(() => _stock += 1),
                   ),
@@ -495,21 +489,21 @@ class _RefillDialogState extends State<_RefillDialog> {
                   AdminChipButton(
                     label: '+1',
                     selected: true,
-                    onPressed: _isSaving || _stock >= product.maxCapacity
+                    onPressed: _isSaving || _stock >= placed.maxCapacity
                         ? null
                         : () => _applyRefill(1),
                   ),
                   AdminChipButton(
                     label: '+5',
                     selected: true,
-                    onPressed: _isSaving || _stock >= product.maxCapacity
+                    onPressed: _isSaving || _stock >= placed.maxCapacity
                         ? null
                         : () => _applyRefill(5),
                   ),
                   AdminChipButton(
                     label: 'Voll auffüllen',
                     selected: true,
-                    onPressed: _isSaving || _stock >= product.maxCapacity
+                    onPressed: _isSaving || _stock >= placed.maxCapacity
                         ? null
                         : _applyRefillToMax,
                   ),
@@ -554,7 +548,7 @@ class _RefillDialogState extends State<_RefillDialog> {
     }
 
     setState(() {
-      _stock = (_stock + amount).clamp(0, widget.product.maxCapacity);
+      _stock = (_stock + amount).clamp(0, widget.placed.maxCapacity);
       _isSaving = false;
     });
   }
@@ -569,7 +563,7 @@ class _RefillDialogState extends State<_RefillDialog> {
     }
 
     setState(() {
-      _stock = widget.product.maxCapacity;
+      _stock = widget.placed.maxCapacity;
       _isSaving = false;
     });
 

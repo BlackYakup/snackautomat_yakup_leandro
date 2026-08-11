@@ -13,6 +13,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Flutter/Dart related leftovers
+**/node_modules/
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -34,6 +37,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local / secrets
+.env
+.env.*
+*.db
+*.db-journal
+
 # Symbolication related
 app.*.symbols
 
@@ -44,3 +53,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Fresh Windows release output
+/dist/
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/placed_product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/double_slot_layout.dart';
 
 class ProductTile extends StatelessWidget {
   const ProductTile({
@@ -9,7 +10,7 @@ class ProductTile extends StatelessWidget {
     required this.isSelected,
   });
 
-  final Product product;
+  final PlacedProduct product;
   final bool isSelected;
 
   @override
@@ -44,7 +45,10 @@ class ProductTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${product.rowLabel}${product.columnNumber}',
+                      displaySlotCode(
+                        rowLabel: product.rowLabel,
+                        columnNumber: product.columnNumber,
+                      ),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,

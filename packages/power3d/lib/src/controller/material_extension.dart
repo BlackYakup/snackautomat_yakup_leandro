@@ -1,8 +1,8 @@
 part of 'power3d_controller.dart';
 
-/// Materials and Lighting extension for [Power3DController].
+/// Material- und Beleuchtungs-Erweiterung für [Power3DController].
 extension MaterialExtension on Power3DController {
-  /// Updates the shading and rendering mode of the 3D scene (e.g., [ShadingMode.wireframe]).
+  /// Aktualisiert den Schattierungs- und Rendermodus der 3D-Szene (z. B. [ShadingMode.wireframe]).
   Future<void> setShadingMode(ShadingMode mode) async {
     value = value.copyWith(shadingMode: mode);
     if (_webViewController == null) return;
@@ -11,9 +11,9 @@ extension MaterialExtension on Power3DController {
     );
   }
 
-  /// Updates the global material properties applied to the entire model.
+  /// Aktualisiert die globalen Materialeigenschaften für das gesamte Modell.
   ///
-  /// This can be used to override colors, metallic/roughness properties, and alpha.
+  /// Damit können Farben, Metallic-/Roughness-Eigenschaften und Alpha überschrieben werden.
   Future<void> setGlobalMaterial(MaterialConfig config) async {
     value = value.copyWith(globalMaterial: config);
     if (_webViewController == null) return;
@@ -39,9 +39,9 @@ extension MaterialExtension on Power3DController {
     );
   }
 
-  /// Sets the lighting configuration for the scene.
+  /// Setzt die Beleuchtungskonfiguration der Szene.
   ///
-  /// Replaces any existing lights with the provided list of [LightingConfig]s.
+  /// Ersetzt vorhandene Lichter durch die bereitgestellte Liste von [LightingConfig]s.
   Future<void> setLights(List<LightingConfig> lightsList) async {
     value = value.copyWith(lights: lightsList);
 
@@ -77,10 +77,10 @@ extension MaterialExtension on Power3DController {
     await setLights([config]);
   }
 
-  /// Updates the scene-level image processing (exposure and contrast).
+  /// Aktualisiert die szenenweite Bildverarbeitung (Exposure und Kontrast).
   ///
-  /// [exposure]: The level of light exposure in the scene.
-  /// [contrast]: The difference between light and dark areas.
+  /// [exposure]: Licht-Exposure-Stufe in der Szene.
+  /// [contrast]: Unterschied zwischen hellen und dunklen Bereichen.
   Future<void> updateSceneProcessing({
     double? exposure,
     double? contrast,
@@ -94,10 +94,10 @@ extension MaterialExtension on Power3DController {
     );
   }
 
-  /// Applies a material/shading mode to selected or unselected parts.
+  /// Wendet einen Material-/Schattierungsmodus auf ausgewählte oder nicht ausgewählte Teile an.
   ///
-  /// [mode]: The shading mode to apply (wireframe, xray, etc.).
-  /// [applyToSelected]: If true, applies to selected parts; if false, to unselected.
+  /// [mode]: Anzuwendender Schattierungsmodus (wireframe, xray usw.).
+  /// [applyToSelected]: Wenn true, auf ausgewählte Teile; wenn false, auf nicht ausgewählte.
   Future<void> applyMaterialModeToSelection(
     ShadingMode mode, {
     bool applyToSelected = true,

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Product {
 
- String get name; int? get id;@JsonKey(name: 'price_cents') int get priceCents;@JsonKey(name: 'stock_quantity') int get stockQuantity;@JsonKey(name: 'max_capacity') int get maxCapacity;@ProductCategoryConverter() ProductCategory get category;@JsonKey(name: 'row_label') String get rowLabel;@JsonKey(name: 'column_number') int get columnNumber;@JsonKey(name: 'slot_width') int get slotWidth;@JsonKey(name: 'image_path') String? get imagePath;@JsonKey(name: 'model_path') String? get modelPath;@JsonKey(name: 'model_part') String? get modelPart;@JsonKey(name: 'icon_key') String? get iconKey;
+ String get name; int? get id;@JsonKey(name: 'price_cents') int get priceCents;@JsonKey(name: 'max_capacity') int get maxCapacity;@ProductCategoryConverter() ProductCategory get category;@JsonKey(name: 'slot_width') int get slotWidth;@JsonKey(name: 'image_path') String? get imagePath;@JsonKey(name: 'model_path') String? get modelPath;@JsonKey(name: 'model_part') String? get modelPart;@JsonKey(name: 'icon_key') String? get iconKey;
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ProductCopyWith<Product> get copyWith => _$ProductCopyWithImpl<Product>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Product&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id)&&(identical(other.priceCents, priceCents) || other.priceCents == priceCents)&&(identical(other.stockQuantity, stockQuantity) || other.stockQuantity == stockQuantity)&&(identical(other.maxCapacity, maxCapacity) || other.maxCapacity == maxCapacity)&&(identical(other.category, category) || other.category == category)&&(identical(other.rowLabel, rowLabel) || other.rowLabel == rowLabel)&&(identical(other.columnNumber, columnNumber) || other.columnNumber == columnNumber)&&(identical(other.slotWidth, slotWidth) || other.slotWidth == slotWidth)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&(identical(other.modelPath, modelPath) || other.modelPath == modelPath)&&(identical(other.modelPart, modelPart) || other.modelPart == modelPart)&&(identical(other.iconKey, iconKey) || other.iconKey == iconKey));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Product&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id)&&(identical(other.priceCents, priceCents) || other.priceCents == priceCents)&&(identical(other.maxCapacity, maxCapacity) || other.maxCapacity == maxCapacity)&&(identical(other.category, category) || other.category == category)&&(identical(other.slotWidth, slotWidth) || other.slotWidth == slotWidth)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&(identical(other.modelPath, modelPath) || other.modelPath == modelPath)&&(identical(other.modelPart, modelPart) || other.modelPart == modelPart)&&(identical(other.iconKey, iconKey) || other.iconKey == iconKey));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,id,priceCents,stockQuantity,maxCapacity,category,rowLabel,columnNumber,slotWidth,imagePath,modelPath,modelPart,iconKey);
+int get hashCode => Object.hash(runtimeType,name,id,priceCents,maxCapacity,category,slotWidth,imagePath,modelPath,modelPart,iconKey);
 
 @override
 String toString() {
-  return 'Product(name: $name, id: $id, priceCents: $priceCents, stockQuantity: $stockQuantity, maxCapacity: $maxCapacity, category: $category, rowLabel: $rowLabel, columnNumber: $columnNumber, slotWidth: $slotWidth, imagePath: $imagePath, modelPath: $modelPath, modelPart: $modelPart, iconKey: $iconKey)';
+  return 'Product(name: $name, id: $id, priceCents: $priceCents, maxCapacity: $maxCapacity, category: $category, slotWidth: $slotWidth, imagePath: $imagePath, modelPath: $modelPath, modelPart: $modelPart, iconKey: $iconKey)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ProductCopyWith<$Res>  {
   factory $ProductCopyWith(Product value, $Res Function(Product) _then) = _$ProductCopyWithImpl;
 @useResult
 $Res call({
- String name, int? id,@JsonKey(name: 'price_cents') int priceCents,@JsonKey(name: 'stock_quantity') int stockQuantity,@JsonKey(name: 'max_capacity') int maxCapacity,@ProductCategoryConverter() ProductCategory category,@JsonKey(name: 'row_label') String rowLabel,@JsonKey(name: 'column_number') int columnNumber,@JsonKey(name: 'slot_width') int slotWidth,@JsonKey(name: 'image_path') String? imagePath,@JsonKey(name: 'model_path') String? modelPath,@JsonKey(name: 'model_part') String? modelPart,@JsonKey(name: 'icon_key') String? iconKey
+ String name, int? id,@JsonKey(name: 'price_cents') int priceCents,@JsonKey(name: 'max_capacity') int maxCapacity,@ProductCategoryConverter() ProductCategory category,@JsonKey(name: 'slot_width') int slotWidth,@JsonKey(name: 'image_path') String? imagePath,@JsonKey(name: 'model_path') String? modelPath,@JsonKey(name: 'model_part') String? modelPart,@JsonKey(name: 'icon_key') String? iconKey
 });
 
 
@@ -65,17 +65,14 @@ class _$ProductCopyWithImpl<$Res>
 
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? id = freezed,Object? priceCents = null,Object? stockQuantity = null,Object? maxCapacity = null,Object? category = null,Object? rowLabel = null,Object? columnNumber = null,Object? slotWidth = null,Object? imagePath = freezed,Object? modelPath = freezed,Object? modelPart = freezed,Object? iconKey = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? id = freezed,Object? priceCents = null,Object? maxCapacity = null,Object? category = null,Object? slotWidth = null,Object? imagePath = freezed,Object? modelPath = freezed,Object? modelPart = freezed,Object? iconKey = freezed,}) {
   return _then(_self.copyWith(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int?,priceCents: null == priceCents ? _self.priceCents : priceCents // ignore: cast_nullable_to_non_nullable
-as int,stockQuantity: null == stockQuantity ? _self.stockQuantity : stockQuantity // ignore: cast_nullable_to_non_nullable
 as int,maxCapacity: null == maxCapacity ? _self.maxCapacity : maxCapacity // ignore: cast_nullable_to_non_nullable
 as int,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as ProductCategory,rowLabel: null == rowLabel ? _self.rowLabel : rowLabel // ignore: cast_nullable_to_non_nullable
-as String,columnNumber: null == columnNumber ? _self.columnNumber : columnNumber // ignore: cast_nullable_to_non_nullable
-as int,slotWidth: null == slotWidth ? _self.slotWidth : slotWidth // ignore: cast_nullable_to_non_nullable
+as ProductCategory,slotWidth: null == slotWidth ? _self.slotWidth : slotWidth // ignore: cast_nullable_to_non_nullable
 as int,imagePath: freezed == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
 as String?,modelPath: freezed == modelPath ? _self.modelPath : modelPath // ignore: cast_nullable_to_non_nullable
 as String?,modelPart: freezed == modelPart ? _self.modelPart : modelPart // ignore: cast_nullable_to_non_nullable
@@ -165,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'row_label')  String rowLabel, @JsonKey(name: 'column_number')  int columnNumber, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Product() when $default != null:
-return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.maxCapacity,_that.category,_that.rowLabel,_that.columnNumber,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
+return $default(_that.name,_that.id,_that.priceCents,_that.maxCapacity,_that.category,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
   return orElse();
 
 }
@@ -186,10 +183,10 @@ return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.m
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'row_label')  String rowLabel, @JsonKey(name: 'column_number')  int columnNumber, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)  $default,) {final _that = this;
 switch (_that) {
 case _Product():
-return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.maxCapacity,_that.category,_that.rowLabel,_that.columnNumber,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
+return $default(_that.name,_that.id,_that.priceCents,_that.maxCapacity,_that.category,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -206,10 +203,10 @@ return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.m
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'row_label')  String rowLabel, @JsonKey(name: 'column_number')  int columnNumber, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  int? id, @JsonKey(name: 'price_cents')  int priceCents, @JsonKey(name: 'max_capacity')  int maxCapacity, @ProductCategoryConverter()  ProductCategory category, @JsonKey(name: 'slot_width')  int slotWidth, @JsonKey(name: 'image_path')  String? imagePath, @JsonKey(name: 'model_path')  String? modelPath, @JsonKey(name: 'model_part')  String? modelPart, @JsonKey(name: 'icon_key')  String? iconKey)?  $default,) {final _that = this;
 switch (_that) {
 case _Product() when $default != null:
-return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.maxCapacity,_that.category,_that.rowLabel,_that.columnNumber,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
+return $default(_that.name,_that.id,_that.priceCents,_that.maxCapacity,_that.category,_that.slotWidth,_that.imagePath,_that.modelPath,_that.modelPart,_that.iconKey);case _:
   return null;
 
 }
@@ -221,17 +218,14 @@ return $default(_that.name,_that.id,_that.priceCents,_that.stockQuantity,_that.m
 @JsonSerializable()
 
 class _Product extends Product {
-  const _Product({required this.name, this.id, @JsonKey(name: 'price_cents') required this.priceCents, @JsonKey(name: 'stock_quantity') required this.stockQuantity, @JsonKey(name: 'max_capacity') this.maxCapacity = 10, @ProductCategoryConverter() required this.category, @JsonKey(name: 'row_label') required this.rowLabel, @JsonKey(name: 'column_number') required this.columnNumber, @JsonKey(name: 'slot_width') required this.slotWidth, @JsonKey(name: 'image_path') this.imagePath, @JsonKey(name: 'model_path') this.modelPath, @JsonKey(name: 'model_part') this.modelPart, @JsonKey(name: 'icon_key') this.iconKey}): super._();
+  const _Product({required this.name, this.id, @JsonKey(name: 'price_cents') required this.priceCents, @JsonKey(name: 'max_capacity') this.maxCapacity = 10, @ProductCategoryConverter() required this.category, @JsonKey(name: 'slot_width') required this.slotWidth, @JsonKey(name: 'image_path') this.imagePath, @JsonKey(name: 'model_path') this.modelPath, @JsonKey(name: 'model_part') this.modelPart, @JsonKey(name: 'icon_key') this.iconKey}): super._();
   factory _Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);
 
 @override final  String name;
 @override final  int? id;
 @override@JsonKey(name: 'price_cents') final  int priceCents;
-@override@JsonKey(name: 'stock_quantity') final  int stockQuantity;
 @override@JsonKey(name: 'max_capacity') final  int maxCapacity;
 @override@ProductCategoryConverter() final  ProductCategory category;
-@override@JsonKey(name: 'row_label') final  String rowLabel;
-@override@JsonKey(name: 'column_number') final  int columnNumber;
 @override@JsonKey(name: 'slot_width') final  int slotWidth;
 @override@JsonKey(name: 'image_path') final  String? imagePath;
 @override@JsonKey(name: 'model_path') final  String? modelPath;
@@ -251,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Product&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id)&&(identical(other.priceCents, priceCents) || other.priceCents == priceCents)&&(identical(other.stockQuantity, stockQuantity) || other.stockQuantity == stockQuantity)&&(identical(other.maxCapacity, maxCapacity) || other.maxCapacity == maxCapacity)&&(identical(other.category, category) || other.category == category)&&(identical(other.rowLabel, rowLabel) || other.rowLabel == rowLabel)&&(identical(other.columnNumber, columnNumber) || other.columnNumber == columnNumber)&&(identical(other.slotWidth, slotWidth) || other.slotWidth == slotWidth)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&(identical(other.modelPath, modelPath) || other.modelPath == modelPath)&&(identical(other.modelPart, modelPart) || other.modelPart == modelPart)&&(identical(other.iconKey, iconKey) || other.iconKey == iconKey));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Product&&(identical(other.name, name) || other.name == name)&&(identical(other.id, id) || other.id == id)&&(identical(other.priceCents, priceCents) || other.priceCents == priceCents)&&(identical(other.maxCapacity, maxCapacity) || other.maxCapacity == maxCapacity)&&(identical(other.category, category) || other.category == category)&&(identical(other.slotWidth, slotWidth) || other.slotWidth == slotWidth)&&(identical(other.imagePath, imagePath) || other.imagePath == imagePath)&&(identical(other.modelPath, modelPath) || other.modelPath == modelPath)&&(identical(other.modelPart, modelPart) || other.modelPart == modelPart)&&(identical(other.iconKey, iconKey) || other.iconKey == iconKey));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,id,priceCents,stockQuantity,maxCapacity,category,rowLabel,columnNumber,slotWidth,imagePath,modelPath,modelPart,iconKey);
+int get hashCode => Object.hash(runtimeType,name,id,priceCents,maxCapacity,category,slotWidth,imagePath,modelPath,modelPart,iconKey);
 
 @override
 String toString() {
-  return 'Product(name: $name, id: $id, priceCents: $priceCents, stockQuantity: $stockQuantity, maxCapacity: $maxCapacity, category: $category, rowLabel: $rowLabel, columnNumber: $columnNumber, slotWidth: $slotWidth, imagePath: $imagePath, modelPath: $modelPath, modelPart: $modelPart, iconKey: $iconKey)';
+  return 'Product(name: $name, id: $id, priceCents: $priceCents, maxCapacity: $maxCapacity, category: $category, slotWidth: $slotWidth, imagePath: $imagePath, modelPath: $modelPath, modelPart: $modelPart, iconKey: $iconKey)';
 }
 
 
@@ -271,7 +265,7 @@ abstract mixin class _$ProductCopyWith<$Res> implements $ProductCopyWith<$Res> {
   factory _$ProductCopyWith(_Product value, $Res Function(_Product) _then) = __$ProductCopyWithImpl;
 @override @useResult
 $Res call({
- String name, int? id,@JsonKey(name: 'price_cents') int priceCents,@JsonKey(name: 'stock_quantity') int stockQuantity,@JsonKey(name: 'max_capacity') int maxCapacity,@ProductCategoryConverter() ProductCategory category,@JsonKey(name: 'row_label') String rowLabel,@JsonKey(name: 'column_number') int columnNumber,@JsonKey(name: 'slot_width') int slotWidth,@JsonKey(name: 'image_path') String? imagePath,@JsonKey(name: 'model_path') String? modelPath,@JsonKey(name: 'model_part') String? modelPart,@JsonKey(name: 'icon_key') String? iconKey
+ String name, int? id,@JsonKey(name: 'price_cents') int priceCents,@JsonKey(name: 'max_capacity') int maxCapacity,@ProductCategoryConverter() ProductCategory category,@JsonKey(name: 'slot_width') int slotWidth,@JsonKey(name: 'image_path') String? imagePath,@JsonKey(name: 'model_path') String? modelPath,@JsonKey(name: 'model_part') String? modelPart,@JsonKey(name: 'icon_key') String? iconKey
 });
 
 
@@ -288,17 +282,14 @@ class __$ProductCopyWithImpl<$Res>
 
 /// Create a copy of Product
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? id = freezed,Object? priceCents = null,Object? stockQuantity = null,Object? maxCapacity = null,Object? category = null,Object? rowLabel = null,Object? columnNumber = null,Object? slotWidth = null,Object? imagePath = freezed,Object? modelPath = freezed,Object? modelPart = freezed,Object? iconKey = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? id = freezed,Object? priceCents = null,Object? maxCapacity = null,Object? category = null,Object? slotWidth = null,Object? imagePath = freezed,Object? modelPath = freezed,Object? modelPart = freezed,Object? iconKey = freezed,}) {
   return _then(_Product(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int?,priceCents: null == priceCents ? _self.priceCents : priceCents // ignore: cast_nullable_to_non_nullable
-as int,stockQuantity: null == stockQuantity ? _self.stockQuantity : stockQuantity // ignore: cast_nullable_to_non_nullable
 as int,maxCapacity: null == maxCapacity ? _self.maxCapacity : maxCapacity // ignore: cast_nullable_to_non_nullable
 as int,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as ProductCategory,rowLabel: null == rowLabel ? _self.rowLabel : rowLabel // ignore: cast_nullable_to_non_nullable
-as String,columnNumber: null == columnNumber ? _self.columnNumber : columnNumber // ignore: cast_nullable_to_non_nullable
-as int,slotWidth: null == slotWidth ? _self.slotWidth : slotWidth // ignore: cast_nullable_to_non_nullable
+as ProductCategory,slotWidth: null == slotWidth ? _self.slotWidth : slotWidth // ignore: cast_nullable_to_non_nullable
 as int,imagePath: freezed == imagePath ? _self.imagePath : imagePath // ignore: cast_nullable_to_non_nullable
 as String?,modelPath: freezed == modelPath ? _self.modelPath : modelPath // ignore: cast_nullable_to_non_nullable
 as String?,modelPart: freezed == modelPart ? _self.modelPart : modelPart // ignore: cast_nullable_to_non_nullable

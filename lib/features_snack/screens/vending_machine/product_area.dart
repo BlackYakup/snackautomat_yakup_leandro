@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/placed_product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/product_row.dart';
 
 class ProductArea extends StatelessWidget {
@@ -11,8 +11,8 @@ class ProductArea extends StatelessWidget {
 
   static const _rowLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-  final List<Product> products;
-  final Product? selectedProduct;
+  final List<PlacedProduct> products;
+  final PlacedProduct? selectedProduct;
 
   @override
   Widget build(BuildContext context) {

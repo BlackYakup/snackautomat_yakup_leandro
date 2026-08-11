@@ -10,9 +10,17 @@ set(BINARY_NAME "snackautomat_yakup_leandro")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# flutter_inappwebview_windows nutzt noch add_custom_command(... DEPENDS) —
+# unter CMake ≥3.31 CMP0175-Warnung (Plugin-Bug, nicht PC-Wechsel).
+if(POLICY CMP0175)
+  cmake_policy(SET CMP0175 OLD)
+endif()
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE INTERNAL "" FORCE)
+
 # Plugin-Header (WebView2) erzeugen harmlose MSVC-Warnungen.
+# /FS: parallele CL.EXE dürfen dieselbe .pdb schreiben (sonst C1041).
 if(MSVC)
-  add_compile_options(/wd4244 /wd4458)
+  add_compile_options(/wd4244 /wd4458 /FS)
 endif()
 
 # Define build configuration option.
@@ -36,6 +44,10 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
+
+# MSVC 14.51+ (VS 18) macht <experimental/coroutine> zum Hard-Error (STL1011).
+# flutter_inappwebview_windows / C++/WinRT brauchen den Suppress noch.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 
 # Compilation settings that should be applied to most targets.
 #

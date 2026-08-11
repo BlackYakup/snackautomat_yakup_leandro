@@ -26,15 +26,13 @@ abstract final class Power3dBootstrap {
       p.join(targetDir.path, 'js', 'annotation', 'styles', 'tooltip.js'),
     );
     final babylonFile = File(p.join(targetDir.path, 'babylon', 'babylon.js'));
-    final brokenBabylonFile = File(
-      p.join(targetDir.path, r'babylon\babylon.js'),
-    );
+    // Hinweis: `p.join(..., r'babylon\babylon.js')` ist unter Windows identisch
+    // mit dem korrekten Pfad und darf NICHT als „fehlerhaft“ gewertet werden.
 
     final needsUnzip = !await targetDir.exists() ||
         !await indexFile.exists() ||
         !await tooltipFile.exists() ||
-        !await babylonFile.exists() ||
-        await brokenBabylonFile.exists();
+        !await babylonFile.exists();
 
     if (needsUnzip) {
       debugPrint('Power3dBootstrap: Assets unvollständig – werden neu entpackt.');

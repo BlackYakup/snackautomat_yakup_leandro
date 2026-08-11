@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/db_creater.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/services/power3d_bootstrap.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_theme.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/vending_machine_screen.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/vending_machine_3d_landing_screen.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/power3d_bootstrap.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,14 +17,14 @@ void main() async {
 }
 
 class SnackLY extends StatelessWidget {
-  const SnackLY ({super.key});
+  const SnackLY({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: appLightTheme(),
-      home: const VendingMachineScreen(),
+      home: const VendingMachine3DLandingScreen(),
     );
   }
 }

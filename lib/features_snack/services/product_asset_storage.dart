@@ -143,7 +143,7 @@ abstract final class ProductAssetStorage {
     return storeModel(path);
   }
 
-  /// Kopiert das Modell sofort in den App-Ordner (für Vorschau nach Upload).
+  /// Kopiert das Modell sofort in den App-Ordner (für Vorschau nach dem Hochladen).
   static Future<String> ensureModelForPreview(String path) async {
     final normalized = normalizePath(path);
     final persisted = await persistModelPath(normalized);

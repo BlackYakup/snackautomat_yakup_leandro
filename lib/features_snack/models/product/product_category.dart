@@ -35,19 +35,56 @@ class ProductCategoryConverter implements JsonConverter<ProductCategory, String>
 }
 
 bool isCategoryAllowedInRow(ProductCategory category, String rowLabel) {
-  switch (rowLabel.toUpperCase()) {
-    case 'A':
-    case 'B':
-      return category == ProductCategory.drinks;
-    case 'C':
-      return category == ProductCategory.snacksBars || category == ProductCategory.chips;
-    case 'D':
-      return category == ProductCategory.sweetsCookies;
-    case 'E':
-      return category == ProductCategory.knabberMints;
-    case 'F':
-      return category == ProductCategory.fitness || category == ProductCategory.knabberMints;
-    default:
-      return false;
+  return isPlacementAllowed(
+    category: category,
+    slotWidth: category == ProductCategory.drinks ||
+            category == ProductCategory.snacksBars ||
+            category == ProductCategory.chips ||
+            category == ProductCategory.sweetsCookies
+        ? 1
+        : 2,
+    rowLabel: rowLabel,
+  );
+}
+
+/// Breite 1: A–B Getränke, C–D schmale Snacks. Breite 2: E–F Doppel-Slots.
+bool isPlacementAllowed({
+  required ProductCategory category,
+  required int slotWidth,
+  required String rowLabel,
+}) {
+  final row = rowLabel.toUpperCase();
+
+  if (slotWidth == 2) {
+    return row == 'E' || row == 'F';
   }
+
+  if (slotWidth != 1) {
+    return false;
+  }
+
+  if (row == 'A' || row == 'B') {
+    return category == ProductCategory.drinks;
+  }
+
+  if (row == 'C' || row == 'D') {
+    return category != ProductCategory.drinks;
+  }
+
+  return false;
+}
+
+List<String> allowedRowsForProduct({
+  required ProductCategory category,
+  required int slotWidth,
+}) {
+  return ['A', 'B', 'C', 'D', 'E', 'F']
+      .where(
+        (row) => isPlacementAllowed(
+          category: category,
+          slotWidth: slotWidth,
+          rowLabel: row,
+        ),
+      )
+      .toList();
 }

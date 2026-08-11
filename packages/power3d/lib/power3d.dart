@@ -9,71 +9,72 @@ import 'src/controller/power3d_controller.dart';
 
 export 'src/models/power3d_model.dart';
 export 'src/controller/power3d_controller.dart';
+export 'src/controller/asset_manager.dart';
 
-/// A powerful, industry-level 3D model viewer widget built on top of Babylon.js.
+/// Ein leistungsstarkes, industrieorientiertes 3D-Modell-Viewer-Widget auf Basis von Babylon.js.
 ///
-/// [Power3D] provides a high-level API for rendering complex GLB/GLTF models
-/// with support for advanced features like hardware-accelerated screenshots,
-/// skeletal animations, PBR material overrides, and interactive annotations.
+/// [Power3D] bietet eine High-Level-API zum Rendern komplexer GLB/GLTF-Modelle
+/// mit Unterstützung für erweiterte Funktionen wie hardwarebeschleunigte Screenshots,
+/// Skelettanimationen, PBR-Material-Overrides und interaktive Annotationen.
 ///
-/// It is designed to be architecture-agnostic and works seamlessly with
-/// popular state management solutions like Bloc, Riverpod, or Provider.
+/// Es ist architekturagnostisch und funktioniert nahtlos mit
+/// gängigen State-Management-Lösungen wie Bloc, Riverpod oder Provider.
 class Power3D extends StatefulWidget {
-  /// Optional controller to programmatically interact with the 3D scene.
+  /// Optionaler Controller für die programmatische Interaktion mit der 3D-Szene.
   final Power3DController? controller;
 
-  /// Initial model data to load when the widget initializes.
+  /// Initiale Modelldaten, die beim Initialisieren des Widgets geladen werden.
   final Power3DData? initialModel;
 
-  /// Callback for receiving messages from the underlying JavaScript layer.
+  /// Callback zum Empfangen von Nachrichten aus der darunterliegenden JavaScript-Schicht.
   final Function(String)? onMessage;
 
-  /// Callback triggered when a 3D model is successfully loaded.
+  /// Callback, der ausgelöst wird, wenn ein 3D-Modell erfolgreich geladen wurde.
   final VoidCallback? onModelLoaded;
 
-  /// If set to `true`, the internal WebView engine will only start up 
-  /// when the controller's `initialize()` method is called. Useful for 
-  /// performance optimization in multi-tabbed or complex UIs.
+  /// Wenn auf `true` gesetzt, startet die interne WebView-Engine erst,
+  /// wenn die Methode `initialize()` des Controllers aufgerufen wird. Nützlich zur
+  /// Performance-Optimierung in UIs mit mehreren Tabs oder komplexen Layouts.
   final bool lazy;
 
-  /// Widget to display if an error occurs during model loading.
+  /// Widget, das angezeigt wird, wenn beim Laden des Modells ein Fehler auftritt.
   final Widget? errorWidget;
 
-  /// Custom UI to display while the model is loading.
+  /// Benutzerdefinierte UI, die während des Modellladens angezeigt wird.
   final Widget Function(BuildContext context, Power3DController controller)?
   loadingUi;
 
-  /// A builder function to overlay custom Flutter widgets on top of the 3D scene.
-  /// This is ideal for adding environment backgrounds, custom HUDs,
-  /// or floating camera controls that react to the viewer's state.
+  /// Builder-Funktion zum Überlagern benutzerdefinierter Flutter-Widgets über der 3D-Szene.
+  /// Ideal zum Hinzufügen von Umgebungs-Hintergründen, eigenen HUDs
+  /// oder schwebenden Kamerasteuerungen, die auf den Viewer-Status reagieren.
   final Widget Function(BuildContext context, Power3DState state)?
   environmentBuilder;
 
-  /// Initial set of lights for the scene.
+  /// Initiale Lichter für die Szene.
   final List<LightingConfig>? lights;
 
-  /// Initial exposure level for the scene.
+  /// Initialer Exposure-Wert der Szene.
   final double? exposure;
 
-  /// Initial contrast level for the scene.
+  /// Initialer Kontrastwert der Szene.
   final double? contrast;
 
-  /// JSON string representing the annotations.
+  /// JSON-String mit den Annotationen.
   final String? annotations;
 
-  /// The visual style applied to the annotations.
+  /// Visueller Stil der Annotationen.
   ///
-  /// Can be a direct HTML/CSS/JS string for custom styling, a local JS file path,
-  /// or an abstract type (like the `Power3DAnnotationStyle` Enum from
-  /// the `power3d_annotations` plugin).
+  /// Kann ein direkter HTML/CSS/JS-String für eigenes Styling, ein lokaler JS-Dateipfad
+  /// oder ein abstrakter Typ sein (z. B. das Enum `Power3DAnnotationStyle` aus
+  /// dem Plugin `power3d_annotations`).
   final dynamic annotationStyle;
 
-  /// Controls how sensitive pinch-to-zoom and scroll-wheel zooming are.
+  /// Steuert, wie empfindlich Pinch-to-Zoom und Mausrad-Zoom reagieren.
   ///
-  /// Range: 0.0 (fastest) to 1.0 (slowest). Defaults to 0.5.
+  /// Bereich: 0.0 (schnellste) bis 1.0 (langsamste). Standard: 0.5.
   final double zoomSensitivity;
 
-  /// Creates a new [Power3D] viewer.
+  /// Erstellt einen neuen [Power3D]-Viewer.
   const Power3D({
     super.key,
     this.controller,
@@ -93,17 +94,17 @@ class Power3D extends StatefulWidget {
     this.zoomSensitivity = 0.5,
   });
 
-  /// Triggered when an annotation's 'Learn More' action is clicked.
+  /// Wird ausgelöst, wenn die Aktion „Learn More“ einer Annotation angeklickt wird.
   ///
-  /// The [id] is the unique identifier of the annotation point.
-  /// The [data] contains the full JSON object of the annotation as defined
-  /// in the source configuration.
+  /// [id] ist die eindeutige Kennung des Annotationspunkts.
+  /// [data] enthält das vollständige JSON-Objekt der Annotation, wie in der
+  /// Quellkonfiguration definiert.
   final Function(String id, Map<String, dynamic> data)? onAnnotationMore;
 
-  /// Creates a [Power3D] viewer that loads a 3D model from the Flutter asset bundle.
+  /// Erstellt einen [Power3D]-Viewer, der ein 3D-Modell aus dem Flutter-Asset-Bundle lädt.
   ///
-  /// [path] should be the logical path to the asset (e.g., 'assets/models/car.glb').
-  /// Ensure the asset is correctly listed in your `pubspec.yaml`.
+  /// [path] sollte der logische Pfad zum Asset sein (z. B. 'assets/models/car.glb').
+  /// Stelle sicher, dass das Asset korrekt in der `pubspec.yaml` eingetragen ist.
   factory Power3D.fromAsset(
     String path, {
     Key? key,
@@ -149,10 +150,10 @@ class Power3D extends StatefulWidget {
     );
   }
 
-  /// Creates a [Power3D] viewer that loads a 3D model from a remote URL.
+  /// Erstellt einen [Power3D]-Viewer, der ein 3D-Modell von einer Remote-URL lädt.
   ///
-  /// [url] must be a direct link to a GLB or GLTF file.
-  /// Note: Ensure the hosting server allows CORS requests for web platforms.
+  /// [url] muss ein direkter Link zu einer GLB- oder GLTF-Datei sein.
+  /// Hinweis: Stelle sicher, dass der Host-Server CORS-Anfragen für Web-Plattformen erlaubt.
   factory Power3D.fromNetwork(
     String url, {
     Key? key,
@@ -198,7 +199,7 @@ class Power3D extends StatefulWidget {
     );
   }
 
-  /// Creates a [Power3D] viewer from a local file.
+  /// Erstellt einen [Power3D]-Viewer aus einer lokalen Datei.
   factory Power3D.fromFile(
     dynamic file, {
     Key? key,
@@ -252,10 +253,11 @@ class Power3D extends StatefulWidget {
 class _Power3DState extends State<Power3D> {
   InAppWebViewController? _webViewController;
   late Power3DController _controller;
-  // _libReady: assets unzipped, _libPath: path to index.html
+  // _libReady: Assets entpackt, _libPath: Pfad zu index.html
   bool _libReady = false;
   String? _libPath;
-  // _sceneInitialized: JS scene has been initialized once
+  Future<bool>? _libExistsFuture;
+  // _sceneInitialized: JS-Szene wurde einmal initialisiert
   bool _sceneInitialized = false;
 
   @override
@@ -273,7 +275,7 @@ class _Power3DState extends State<Power3D> {
         contrast: widget.contrast,
       );
     }
-    // Apply initial zoom sensitivity to the controller state
+    // Initiale Zoom-Empfindlichkeit auf den Controller-State anwenden
     _controller.value = _controller.value.copyWith(
       zoomSensitivity: widget.zoomSensitivity,
     );
@@ -299,6 +301,7 @@ class _Power3DState extends State<Power3D> {
         setState(() {
           _libPath = indexPath;
           _libReady = true;
+          _libExistsFuture = File(indexPath).exists();
         });
       }
     } catch (e) {
@@ -367,7 +370,7 @@ class _Power3DState extends State<Power3D> {
     return ValueListenableBuilder<Power3DState>(
       valueListenable: _controller,
       builder: (context, state, child) {
-        // If the viewer should be visible
+        // Wenn der Viewer sichtbar sein soll
         if (!widget.lazy || state.status != Power3DStatus.initial) {
           return SizedBox.expand(
             child: Stack(
@@ -379,14 +382,9 @@ class _Power3DState extends State<Power3D> {
                   ),
                 if (_libReady && _libPath != null)
                   FutureBuilder<bool>(
-                    future: File(_libPath!).exists(),
+                    future: _libExistsFuture,
                     builder: (context, snapshot) {
                       final exists = snapshot.data ?? false;
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        debugPrint(
-                          'Power3D: WebView check - file exists: $exists path=$_libPath',
-                        );
-                      }
                       if (!exists &&
                           snapshot.connectionState == ConnectionState.done) {
                         return const Center(
@@ -417,9 +415,9 @@ class _Power3DState extends State<Power3D> {
                             callback: (args) {
                               if (args.isNotEmpty && mounted) {
                                 final String message = args[0];
-                                // We use a microtask to avoid updating state during the build phase,
-                                // which can happen if the WebView triggers messages synchronously
-                                // during its creation or initial loading.
+                                // Microtask, um State-Updates während der Build-Phase zu vermeiden,
+                                // die auftreten können, wenn die WebView Nachrichten synchron
+                                // während Erstellung oder initialem Laden auslöst.
                                 Future.microtask(() {
                                   if (mounted) {
                                     _controller.handleWebViewMessage(message);
@@ -431,7 +429,7 @@ class _Power3DState extends State<Power3D> {
                           );
                         },
                         onLoadStop: (controller, url) async {
-                          // Defer initialization to avoid build-phase conflicts
+                          // Initialisierung verzögern, um Konflikte in der Build-Phase zu vermeiden
                           await Future.microtask(() {});
                           if (!mounted) return;
 
@@ -465,13 +463,13 @@ class _Power3DState extends State<Power3D> {
                       );
                   },
                 ),
-                // Show loading UI on top if loading
+                // Lade-UI oben anzeigen, falls geladen wird
                 if (state.status == Power3DStatus.loading ||
                     state.status == Power3DStatus.initial)
                   widget.loadingUi?.call(context, _controller) ??
                       const Center(child: CircularProgressIndicator()),
 
-                // Show error widget if error
+                // Fehler-Widget anzeigen, falls Fehler
                 if (state.status == Power3DStatus.error)
                   widget.errorWidget ?? const Center(child: Text("Error")),
               ],
@@ -479,7 +477,7 @@ class _Power3DState extends State<Power3D> {
           );
         }
 
-        // Lazy initialization placeholder
+        // Platzhalter bei Lazy-Initialisierung
         return widget.loadingUi?.call(context, _controller) ??
             const Center(child: CircularProgressIndicator());
       },

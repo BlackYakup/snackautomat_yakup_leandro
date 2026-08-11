@@ -5,6 +5,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/models/product/product
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_category.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_model_preview.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/local_file_cache.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/product_catalog_assets.dart';
 
 const productIconOptions = <String, IconData>{
   'local_drink': Icons.local_drink,
@@ -27,39 +28,92 @@ class ProductVisualAvatar extends StatelessWidget {
   const ProductVisualAvatar({
     required this.product,
     this.size = 48,
+    this.preferModelPreview = false,
     super.key,
   });
 
   final Product product;
   final double size;
 
+  /// Wenn wahr und ein Modellpfad existiert: echtes 3D darstellen (nur einzeln nutzen).
+  final bool preferModelPreview;
+
   @override
   Widget build(BuildContext context) {
-    final imagePath = product.imagePath;
-    final hasImage = imagePath != null &&
-        imagePath.isNotEmpty &&
-        LocalFileCache.exists(imagePath);
-    final hasModelPath =
-        product.modelPath != null && product.modelPath!.isNotEmpty;
+    final modelPath = product.modelPath;
+    final hasModel = modelPath != null && modelPath.isNotEmpty;
 
-    if (hasImage) {
+    if (preferModelPreview && hasModel) {
+      return ProductModelPreview(
+        modelPath: modelPath,
+        size: size,
+        selectedPart: product.modelPart,
+      );
+    }
+
+    final imagePath = product.imagePath;
+    final hasAssetImage = isBundleAssetPath(imagePath);
+    final hasFileImage = imagePath != null &&
+        imagePath.isNotEmpty &&
+        !hasAssetImage &&
+        LocalFileCache.exists(imagePath);
+
+    if (hasAssetImage) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: Image.file(
-          File(imagePath),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          cacheWidth: size >= 120 ? 240 : 96,
+        child: Stack(
+          children: [
+            Image.asset(
+              imagePath!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  _iconFallback(context),
+            ),
+            if (hasModel)
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: ProductModelBadge(size: size * 0.28),
+              ),
+          ],
         ),
       );
     }
 
-    if (hasModelPath) {
+    if (hasFileImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          children: [
+            Image.file(
+              File(imagePath),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              cacheWidth: size >= 120 ? 240 : 96,
+            ),
+            if (hasModel)
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: ProductModelBadge(size: size * 0.28),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (hasModel) {
       return ProductModelBadge(size: size);
     }
 
+    return _iconFallback(context);
+  }
+
+  Widget _iconFallback(BuildContext context) {
     return Container(
       width: size,
       height: size,

@@ -1,17 +1,17 @@
 part of 'power3d_controller.dart';
 
-/// Extension on [Power3DController] for animation management.
+/// Erweiterung von [Power3DController] für Animationsverwaltung.
 extension Power3DAnimationExtension on Power3DController {
-  /// Fetches the list of all animations available in the current model.
+  /// Ruft die Liste aller im aktuellen Modell verfügbaren Animationen ab.
   Future<void> getAnimationsList() async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(source: 'getAnimationsList()');
   }
 
-  /// Plays a specific animation by [name].
+  /// Spielt eine bestimmte Animation anhand von [name] ab.
   ///
-  /// [loop] determines if the animation should repeat.
-  /// [speed] sets the playback speed ratio.
+  /// [loop] legt fest, ob die Animation wiederholt werden soll.
+  /// [speed] setzt das Wiedergabe-Geschwindigkeitsverhältnis.
   Future<void> playAnimation(
     String name, {
     bool loop = true,
@@ -24,7 +24,7 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Pauses a specific animation by [name].
+  /// Pausiert eine bestimmte Animation anhand von [name].
   Future<void> pauseAnimation(String name) async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(
@@ -32,7 +32,7 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Stops a specific animation by [name].
+  /// Stoppt eine bestimmte Animation anhand von [name].
   Future<void> stopAnimation(String name) async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(
@@ -40,7 +40,7 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Sets the playback speed for a specific animation.
+  /// Setzt die Wiedergabegeschwindigkeit für eine bestimmte Animation.
   Future<void> setAnimationSpeed(String name, double speed) async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(
@@ -48,7 +48,7 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Sets whether a specific animation should loop.
+  /// Legt fest, ob eine bestimmte Animation in einer Schleife laufen soll.
   Future<void> setAnimationLoop(String name, bool loop) async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(
@@ -56,20 +56,20 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Pauses an animation after a specified [duration].
+  /// Pausiert eine Animation nach einer angegebenen [duration].
   void pauseAfter(String name, Duration duration) {
     Timer(duration, () {
       pauseAnimation(name);
     });
   }
 
-  /// Stops all currently active animations.
+  /// Stoppt alle aktuell aktiven Animationen.
   Future<void> stopAllAnimations() async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(source: 'stopAllAnimations()');
   }
 
-  /// Starts or resumes all available animations.
+  /// Startet oder setzt alle verfügbaren Animationen fort.
   Future<void> startAllAnimations() async {
     if (!value.isInitialized || _webViewController == null) return;
     await _webViewController!.evaluateJavascript(
@@ -77,7 +77,7 @@ extension Power3DAnimationExtension on Power3DController {
     );
   }
 
-  /// Sets whether multiple animations can be played simultaneously.
+  /// Legt fest, ob mehrere Animationen gleichzeitig abgespielt werden können.
   Future<void> setPlayMultiple(bool enabled) async {
     if (!value.isInitialized || _webViewController == null) return;
     value = value.copyWith(playMultiple: enabled);

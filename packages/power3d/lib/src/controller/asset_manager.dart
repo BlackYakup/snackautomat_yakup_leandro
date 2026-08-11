@@ -9,41 +9,32 @@ class Power3DAssetManager {
   static const String _zipPath = 'packages/power3d/assets/power3d_assets.zip';
   static const String _libDirName = 'power3d_assets';
 
-  /// Ensures assets are unzipped in the application directory.
-  /// Returns the path to the index.html file.
+  static Future<HttpServer>? _modelServerFuture;
+  static String? _modelsDir;
+
+  /// Stellt sicher, dass die Assets im Anwendungsverzeichnis entpackt sind.
+  /// Gibt den Pfad zur index.html-Datei zurück.
   static Future<String> prepareAssets() async {
     final appDir = await getApplicationSupportDirectory();
     final targetDir = Directory(p.join(appDir.path, _libDirName));
     final indexFile = File(p.join(targetDir.path, 'index.html'));
-
-    debugPrint('Power3DAssetManager: appDir=${appDir.path}');
-    debugPrint('Power3DAssetManager: targetDir=${targetDir.path}');
-    debugPrint(
-      'Power3DAssetManager: targetDir exists=${await targetDir.exists()}',
-    );
-    debugPrint(
-      'Power3DAssetManager: indexFile exists=${await indexFile.exists()}',
-    );
-
     final tooltipFile = File(
       p.join(targetDir.path, 'js', 'annotation', 'styles', 'tooltip.js'),
     );
-
     final babylonFile = File(p.join(targetDir.path, 'babylon', 'babylon.js'));
-    final brokenBabylonFile = File(p.join(targetDir.path, 'babylon\\babylon.js'));
+
+    // `babylon\babylon.js` NICHT über path.join unter Windows prüfen — das löst
+    // auf die gültige verschachtelte Datei auf und erzwingt bei jedem Start ein Neu-Entpacken.
 
     if (!await targetDir.exists()) {
-      debugPrint('Power3DAssetManager: Creating dir and unzipping...');
       await targetDir.create(recursive: true);
       await _unzipAssets(targetDir.path);
-    } else if (!await indexFile.exists() || 
-               !await tooltipFile.exists() || 
-               !await babylonFile.exists() ||
-               await brokenBabylonFile.exists()) {
+    } else if (!await indexFile.exists() ||
+        !await tooltipFile.exists() ||
+        !await babylonFile.exists()) {
       debugPrint(
-        'Power3DAssetManager: Assets incomplete or broken (backslash issue detected) - cleaning and re-unzipping...',
+        'Power3DAssetManager: Assets incomplete - cleaning and re-unzipping...',
       );
-      // Clean up the directory to remove files with wrong names/separators
       try {
         await targetDir.delete(recursive: true);
         await targetDir.create(recursive: true);
@@ -53,38 +44,27 @@ class Power3DAssetManager {
       await _unzipAssets(targetDir.path);
     }
 
-    // Ensure style directory exists for optional plugins
     final styleDir = Directory(
       p.join(targetDir.path, 'js', 'annotation', 'styles'),
     );
     if (!await styleDir.exists()) {
       await styleDir.create(recursive: true);
-      debugPrint(
-        'Power3DAssetManager: Created styles directory for external plugins.',
-      );
     }
 
-    debugPrint('Power3DAssetManager: returning indexFile=${indexFile.path}');
     return indexFile.path;
   }
 
   static Future<void> _unzipAssets(String targetPath) async {
     try {
-      debugPrint('Power3DAssetManager: Loading zip from assets: $_zipPath');
       final ByteData data = await rootBundle.load(_zipPath);
-      final List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      debugPrint(
-        'Power3DAssetManager: Zip loaded, ${bytes.length} bytes. Decoding...',
-      );
+      final List<int> bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 
       final archive = ZipDecoder().decodeBytes(bytes);
-      debugPrint('Power3DAssetManager: Archive has ${archive.length} files');
 
       for (final file in archive) {
-        // Normalize separators to forward slashes to ensure directories are 
-        // correctly created on Android/Linux.
         final filename = file.name.replaceAll('\\', '/');
-        
+
         if (file.isFile) {
           final fileData = file.content as List<int>;
           final outFile = File(p.join(targetPath, filename));
@@ -94,16 +74,147 @@ class Power3DAssetManager {
           await Directory(p.join(targetPath, filename)).create(recursive: true);
         }
       }
-      debugPrint('Power3DAssetManager: Unzip complete!');
+      debugPrint('Power3DAssetManager: Assets ready at $targetPath');
     } catch (e) {
       debugPrint('Power3DAssetManager: ERROR unzipping: $e');
       rethrow;
     }
   }
 
-  /// Gets the base URL for the unzipped assets.
+  /// Liefert die Basis-URL der entpackten Assets.
   static Future<String> getBaseUrl() async {
     final appDir = await getApplicationSupportDirectory();
     return p.join(appDir.path, _libDirName);
+  }
+
+  /// Lokaler HTTP-Server — WebView2/Babylon kann benachbarte `file://`-
+  /// Pfade nicht zuverlässig laden (Status 0), aber `http://127.0.0.1` funktioniert und bleibt schnell.
+  static Future<String> _modelHttpOrigin() async {
+    final server = await (_modelServerFuture ??= _startModelServer());
+    return 'http://127.0.0.1:${server.port}';
+  }
+
+  static Future<HttpServer> _startModelServer() async {
+    final base = await getBaseUrl();
+    _modelsDir = p.join(base, 'models');
+    await Directory(_modelsDir!).create(recursive: true);
+
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      try {
+        if (request.method == 'OPTIONS') {
+          request.response.headers
+            ..set('Access-Control-Allow-Origin', '*')
+            ..set('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ..set('Access-Control-Allow-Headers', '*');
+          request.response.statusCode = 204;
+          await request.response.close();
+          return;
+        }
+        if (request.method != 'GET') {
+          request.response.statusCode = 405;
+          await request.response.close();
+          return;
+        }
+
+        final name = p.basename(Uri.decodeComponent(request.uri.path));
+        if (name.isEmpty || name == '/' || name.contains('..')) {
+          request.response.statusCode = 400;
+          await request.response.close();
+          return;
+        }
+
+        final file = File(p.join(_modelsDir!, name));
+        if (!await file.exists()) {
+          request.response.statusCode = 404;
+          await request.response.close();
+          return;
+        }
+
+        request.response.headers
+          ..set('Access-Control-Allow-Origin', '*')
+          ..set('Cache-Control', 'public, max-age=3600')
+          ..contentType = ContentType('model', 'gltf-binary');
+        request.response.contentLength = await file.length();
+        await request.response.addStream(file.openRead());
+        await request.response.close();
+      } catch (e, st) {
+        debugPrint('Power3DAssetManager: model serve error: $e\n$st');
+        try {
+          request.response.statusCode = 500;
+          await request.response.close();
+        } catch (_) {}
+      }
+    });
+
+    debugPrint(
+      'Power3DAssetManager: Model HTTP server on 127.0.0.1:${server.port}',
+    );
+    return server;
+  }
+
+  /// Kopiert ein Flutter-Asset-GLB nach `models/` und gibt eine `http://127.0.0.1`-
+  /// URL für Babylon zurück (vermeidet riesiges Base64-IPC und kaputte relative file://-Loads).
+  ///
+  /// Wichtig: Bei Cache-Hit wird das Asset **nicht** erneut aus dem Bundle geladen
+  /// (~85 MB), sonst verdoppelt sich die Startzeit (Bootstrap + loadModel).
+  static Future<String> ensureAssetModelUrl(String assetPath) async {
+    await prepareAssets();
+    final base = await getBaseUrl();
+    final name = p.basename(assetPath);
+    final modelsDir = Directory(p.join(base, 'models'));
+    await modelsDir.create(recursive: true);
+    final out = File(p.join(modelsDir.path, name));
+    final meta = File(p.join(modelsDir.path, '$name.assetsize'));
+
+    var needCopy = !await out.exists();
+    if (!needCopy && await meta.exists()) {
+      final expected = int.tryParse((await meta.readAsString()).trim());
+      final actual = await out.length();
+      if (expected == null || expected != actual || actual < 1_000_000) {
+        needCopy = true;
+      }
+    } else if (!needCopy) {
+      // Alte Caches ohne Meta: große Datei vertrauen, sonst neu kopieren.
+      needCopy = (await out.length()) < 1_000_000;
+    }
+
+    if (needCopy) {
+      debugPrint('Power3DAssetManager: Caching model asset $assetPath …');
+      final byteData = await rootBundle.load(assetPath);
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
+      await out.writeAsBytes(bytes, flush: true);
+      await meta.writeAsString('${bytes.length}');
+      debugPrint(
+        'Power3DAssetManager: Cached model ${out.path} (${bytes.length} bytes)',
+      );
+    } else {
+      debugPrint('Power3DAssetManager: Using cached model ${out.path}');
+    }
+
+    final origin = await _modelHttpOrigin();
+    return '$origin/$name';
+  }
+
+  /// Kopiert eine absolute Datei in den Viewer-Models-Ordner; gibt HTTP-URL zurück.
+  static Future<String> ensureFileModelUrl(String filePath) async {
+    await prepareAssets();
+    final base = await getBaseUrl();
+    final name = p.basename(filePath);
+    final out = File(p.join(base, 'models', name));
+    final src = File(filePath);
+    if (!await src.exists()) {
+      throw Exception('File not found: $filePath');
+    }
+    final len = await src.length();
+    if (!await out.exists() || await out.length() != len) {
+      await out.parent.create(recursive: true);
+      await src.copy(out.path);
+    }
+    final origin = await _modelHttpOrigin();
+    return '$origin/$name';
   }
 }

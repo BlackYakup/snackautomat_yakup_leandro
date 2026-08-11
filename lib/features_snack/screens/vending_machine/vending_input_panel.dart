@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/screens/vending_machine/change_output.dart';
 
 class VendingInputPanel extends ConsumerWidget {
   const VendingInputPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(vendingSessionProvider);
+
     return Column(
       children: [
         Expanded(
@@ -40,7 +43,7 @@ class VendingInputPanel extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const _ChangeOutput(),
+        ChangeOutput(session: session),
       ],
     );
   }
@@ -211,37 +214,5 @@ class _ActionButtons extends ConsumerWidget {
         ),
       ],
     );
-  }
-}
-
-class _ChangeOutput extends ConsumerWidget {
-  const _ChangeOutput();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(vendingSessionProvider);
-
-    return Card(
-      child: SizedBox(
-        width: double.infinity,
-        child: ListTile(
-          title: const Text('Wechselgeldausgabe'),
-          subtitle: Text(_formatCoinMap(session.outputChange)),
-        ),
-      ),
-    );
-  }
-
-  String _formatCoinMap(Map<int, int> coins) {
-    if (coins.isEmpty) {
-      return 'Leer';
-    }
-
-    final entries = coins.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
-
-    return entries
-        .map((entry) => '${entry.value} x ${formatCents(entry.key)}')
-        .join(', ');
   }
 }

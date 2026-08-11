@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
@@ -121,7 +123,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
                       _coinWasAccepted
                           ? 'Münze angenommen'
                           : !inputEnabled
-                          ? 'Bitte warten'
+                          ? 'Erst Produkt wählen'
                           : isHovered
                           ? 'Loslassen'
                           : 'Münze hier einwerfen',
@@ -141,7 +143,7 @@ class _CoinSlotState extends ConsumerState<CoinSlot> {
         ),
         const SizedBox(height: 10),
         const Text(
-          'Münzen antippen oder ziehen',
+          'Münzen nur bei angezeigtem Preis',
           style: TextStyle(fontSize: 12),
         ),
         const SizedBox(height: 6),
@@ -263,5 +265,58 @@ class CoinWidget extends StatelessWidget {
     }
 
     return '${denominationCents ~/ 100}€';
+  }
+}
+
+/// Münzen-Auswahl (ohne Schlitz) — z. B. 2D-Bedienfeld.
+/// Nur aktiv während der Zahlungsphase (Preis angezeigt).
+class CoinTray extends ConsumerWidget {
+  const CoinTray({super.key, this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inputEnabled = ref.watch(
+      vendingSessionProvider.select((s) => s.canInsertCoins),
+    );
+    final notifier = ref.read(vendingSessionProvider.notifier);
+    final diameter = compact ? 38.0 : 46.0;
+
+    return Wrap(
+      spacing: compact ? 6 : 8,
+      runSpacing: compact ? 6 : 8,
+      alignment: WrapAlignment.center,
+      children: coinDenominationsCents.map((coin) {
+        return Draggable<int>(
+          data: coin,
+          maxSimultaneousDrags: inputEnabled ? 1 : 0,
+          feedback: Material(
+            color: Colors.transparent,
+            child: CoinWidget(
+              denominationCents: coin,
+              isDragging: true,
+              diameter: diameter,
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.3,
+            child: CoinWidget(
+              denominationCents: coin,
+              enabled: inputEnabled,
+              diameter: diameter,
+            ),
+          ),
+          child: CoinWidget(
+            denominationCents: coin,
+            enabled: inputEnabled,
+            diameter: diameter,
+            onTap: inputEnabled
+                ? () => unawaited(notifier.insertCoin(coin))
+                : null,
+          ),
+        );
+      }).toList(),
+    );
   }
 }

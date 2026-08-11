@@ -1,90 +1,90 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Source of the 3D model.
+/// Quelle des 3D-Modells.
 enum Power3DSource {
-  /// Loaded from Flutter assets.
+  /// Aus Flutter-Assets geladen.
   asset,
 
-  /// Loaded from a network URL.
+  /// Von einer Netzwerk-URL geladen.
   network,
 
-  /// Loaded from a local file path.
+  /// Von einem lokalen Dateipfad geladen.
   file,
 }
 
-/// Directions for automatic rotation of the model.
+/// Richtungen für die automatische Rotation des Modells.
 enum RotationDirection {
-  /// Clockwise rotation.
+  /// Rotation im Uhrzeigersinn.
   clockwise,
 
-  /// Counter-clockwise rotation.
+  /// Rotation gegen den Uhrzeigersinn.
   counterClockwise,
 }
 
-/// Types of lights supported in the scene.
+/// In der Szene unterstützte Lichttypen.
 enum LightType {
-  /// Ambient light that illuminates all objects equally from a specific direction.
+  /// Umgebungslicht, das alle Objekte gleichmäßig aus einer bestimmten Richtung beleuchtet.
   hemispheric,
 
-  /// Parallel light rays (like sunlight).
+  /// Parallele Lichtstrahlen (wie Sonnenlicht).
   directional,
 
-  /// Light that radiates from a single point in all directions.
+  /// Licht, das von einem Punkt in alle Richtungen strahlt.
   point,
 }
 
-/// Shading and rendering modes for the 3D scene.
+/// Schattierungs- und Rendermodi für die 3D-Szene.
 enum ShadingMode {
-  /// Standard shaded rendering with lighting.
+  /// Standard-Schattierung mit Beleuchtung.
   shaded,
 
-  /// Show the underlying mesh wireframe.
+  /// Underlyinges Mesh-Wireframe anzeigen.
   wireframe,
 
-  /// Render only the vertices of the mesh.
+  /// Nur die Vertices des Meshes rendern.
   pointCloud,
 
-  /// Semi-transparent X-ray style rendering.
+  /// Halbtransparentes Röntgen-Rendering.
   xray,
 
-  /// Render with flat colors, ignoring lighting.
+  /// Flache Farben ohne Beleuchtung rendern.
   unlit,
 
-  /// Visualize surface normals.
+  /// Oberflächennormalen visualisieren.
   normals,
 
-  /// Show a UV checkerboard pattern for texture alignment.
+  /// UV-Checkerboard-Muster zur Textur-Ausrichtung anzeigen.
   uvChecker,
 
-  /// Visualize the roughness property of materials.
+  /// Roughness-Eigenschaft der Materialien visualisieren.
   roughness,
 
-  /// Visualize the metallic property of materials.
+  /// Metallic-Eigenschaft der Materialien visualisieren.
   metallic,
 }
 
-/// Configuration for overriding material properties of the model.
+/// Konfiguration zum Überschreiben von Materialeigenschaften des Modells.
 class MaterialConfig {
-  /// Base color of the material.
+  /// Basisfarbe des Materials.
   final Color? color;
 
-  /// Metallic property (0.0 to 1.0).
+  /// Metallic-Eigenschaft (0.0 bis 1.0).
   final double? metallic;
 
-  /// Roughness property (0.0 to 1.0).
+  /// Roughness-Eigenschaft (0.0 bis 1.0).
   final double? roughness;
 
-  /// Transparency level (0.0 to 1.0).
+  /// Transparenzstufe (0.0 bis 1.0).
   final double? alpha;
 
-  /// Emissive (glowing) color of the material.
+  /// Emissive (leuchtende) Farbe des Materials.
   final Color? emissiveColor;
 
-  /// Whether to render both sides of the mesh polygons.
+  /// Ob beide Seiten der Mesh-Polygone gerendert werden.
   final bool? doubleSided;
 
-  /// Creates a new material configuration.
+  /// Erstellt eine neue Materialkonfiguration.
   const MaterialConfig({
     this.color,
     this.metallic,
@@ -94,7 +94,7 @@ class MaterialConfig {
     this.doubleSided,
   });
 
-  /// Creates a copy of this configuration with the given fields replaced.
+  /// Erstellt eine Kopie dieser Konfiguration mit ersetzten Feldern.
   MaterialConfig copyWith({
     Color? color,
     double? metallic,
@@ -114,25 +114,25 @@ class MaterialConfig {
   }
 }
 
-/// Visual style for selected or unselected parts of the model.
+/// Visueller Stil für ausgewählte oder nicht ausgewählte Teile des Modells.
 class SelectionStyle {
-  /// Color used to highlight the selected part.
+  /// Farbe zur Hervorhebung des ausgewählten Teils.
   final Color? highlightColor;
 
-  /// Color of the outline around the selected part.
+  /// Farbe der Kontur um das ausgewählte Teil.
   final Color? outlineColor;
 
-  /// Width of the outline.
+  /// Breite der Kontur.
   final double? outlineWidth;
 
-  /// Creates a new selection style.
+  /// Erstellt einen neuen Selection-Stil.
   const SelectionStyle({
     this.highlightColor,
     this.outlineColor,
     this.outlineWidth,
   });
 
-  /// Creates a copy of this style with the given fields replaced.
+  /// Erstellt eine Kopie dieses Stils mit ersetzten Feldern.
   SelectionStyle copyWith({
     Color? highlightColor,
     Color? outlineColor,
@@ -146,47 +146,47 @@ class SelectionStyle {
   }
 }
 
-/// Positional offset for selected parts.
+/// Positionsversatz für ausgewählte Teile.
 class SelectionShift {
-  /// X-axis offset.
+  /// Versatz auf der X-Achse.
   final double x;
 
-  /// Y-axis offset.
+  /// Versatz auf der Y-Achse.
   final double y;
 
-  /// Z-axis offset.
+  /// Versatz auf der Z-Achse.
   final double z;
 
-  /// Creates a new selection shift.
+  /// Erstellt einen neuen Selection-Shift.
   const SelectionShift({this.x = 0, this.y = 0, this.z = 0});
 
-  /// Creates a copy of this shift with the given fields replaced.
+  /// Erstellt eine Kopie dieses Shifts mit ersetzten Feldern.
   SelectionShift copyWith({double? x, double? y, double? z}) {
     return SelectionShift(x: x ?? this.x, y: y ?? this.y, z: z ?? this.z);
   }
 }
 
-/// Configuration for the object parts selection system.
+/// Konfiguration für das Objektteil-Auswahl-System.
 class SelectionConfig {
-  /// Whether selection is enabled.
+  /// Ob die Auswahl aktiviert ist.
   final bool enabled;
 
-  /// Whether multiple parts can be selected simultaneously.
+  /// Ob mehrere Teile gleichzeitig ausgewählt werden können.
   final bool multipleSelection;
 
-  /// Style applied to selected parts.
+  /// Stil für ausgewählte Teile.
   final SelectionStyle? selectionStyle;
 
-  /// Style applied to parts that are NOT selected.
+  /// Stil für Teile, die NICHT ausgewählt sind.
   final SelectionStyle? unselectedStyle;
 
-  /// Scaling factor applied to selected parts.
+  /// Skalierungsfaktor für ausgewählte Teile.
   final double scaleSelection;
 
-  /// Positional shift applied to selected parts.
+  /// Positionsversatz für ausgewählte Teile.
   final SelectionShift? selectionShift;
 
-  /// Creates a new selection configuration.
+  /// Erstellt eine neue Selection-Konfiguration.
   const SelectionConfig({
     this.enabled = false,
     this.multipleSelection = false,
@@ -196,7 +196,7 @@ class SelectionConfig {
     this.selectionShift,
   });
 
-  /// Creates a copy of this configuration with the given fields replaced.
+  /// Erstellt eine Kopie dieser Konfiguration mit ersetzten Feldern.
   SelectionConfig copyWith({
     bool? enabled,
     bool? multipleSelection,
@@ -216,33 +216,33 @@ class SelectionConfig {
   }
 }
 
-/// Styles for the bounding box visualization.
+/// Stile für die Bounding-Box-Visualisierung.
 enum BoundingBoxStyle {
-  /// Standard wireframe cube with scale handles.
+  /// Standard-Wireframe-Würfel mit Scale-Handles.
   cube,
 
-  /// Wireframe sphere encompassing the bounds.
+  /// Wireframe-Kugel um die Bounds.
   sphere,
 
-  /// Simple wireframe box without handles.
+  /// Einfache Wireframe-Box ohne Handles.
   simple,
 }
 
-/// Configuration for bounding box visualization.
+/// Konfiguration für die Bounding-Box-Visualisierung.
 class BoundingBoxConfig {
-  /// Color of the bounding box lines.
+  /// Farbe der Bounding-Box-Linien.
   final Color color;
 
-  /// Width of the bounding box lines.
+  /// Breite der Bounding-Box-Linien.
   final double lineWidth;
 
-  /// Visual style of the bounding box.
+  /// Visueller Stil der Bounding Box.
   final BoundingBoxStyle style;
 
-  /// Whether to show dimensions/measurements.
+  /// Ob Abmessungen/Maße angezeigt werden.
   final bool showDimensions;
 
-  /// Creates a new bounding box configuration.
+  /// Erstellt eine neue Bounding-Box-Konfiguration.
   const BoundingBoxConfig({
     this.color = Colors.green,
     this.lineWidth = 1.0,
@@ -250,7 +250,7 @@ class BoundingBoxConfig {
     this.showDimensions = false,
   });
 
-  /// Creates a copy of this configuration with the given fields replaced.
+  /// Erstellt eine Kopie dieser Konfiguration mit ersetzten Feldern.
   BoundingBoxConfig copyWith({
     Color? color,
     double? lineWidth,
@@ -266,150 +266,150 @@ class BoundingBoxConfig {
   }
 }
 
-/// Data structure representing a 3D model source.
+/// Datenstruktur für eine 3D-Modellquelle.
 class Power3DData {
-  /// Path or URL to the model file.
+  /// Pfad oder URL zur Modelldatei.
   final String path;
 
-  /// Source type (asset, network, or file).
+  /// Quelltyp (Asset, Netzwerk oder Datei).
   final Power3DSource source;
 
-  /// Custom name for the file (optional).
+  /// Benutzerdefinierter Dateiname (optional).
   final String? fileName;
 
-  /// Creates a new model data structure.
+  /// Erstellt eine neue Modell-Datenstruktur.
   const Power3DData({
     required this.path,
     required this.source,
     this.fileName,
   });
 
-  /// Returns the file extension of the model path.
+  /// Gibt die Dateiendung des Modellpfads zurück.
   String get extension => path.split('.').last.toLowerCase();
 }
 
-/// Loading status of the 3D model.
+/// Ladestatus des 3D-Modells.
 enum Power3DStatus {
-  /// Initial state, no model loading started.
+  /// Initialzustand, kein Modellladen gestartet.
   initial,
 
-  /// Model is currently being downloaded or loaded into the scene.
+  /// Modell wird gerade heruntergeladen oder in die Szene geladen.
   loading,
 
-  /// Model has been successfully loaded.
+  /// Modell wurde erfolgreich geladen.
   loaded,
 
-  /// An error occurred during loading.
+  /// Beim Laden ist ein Fehler aufgetreten.
   error,
 }
 
-/// State of the Power3D viewer.
+/// Zustand des Power3D-Viewers.
 class Power3DState {
-  /// Current loading status.
+  /// Aktueller Ladestatus.
   final Power3DStatus status;
 
-  /// Error message if status is [Power3DStatus.error].
+  /// Fehlermeldung, wenn der Status [Power3DStatus.error] ist.
   final String? errorMessage;
 
-  /// Name of the currently loaded model.
+  /// Name des aktuell geladenen Modells.
   final String? currentModelName;
 
-  /// Whether the Babylon.js engine is initialized.
+  /// Ob die Babylon.js-Engine initialisiert ist.
   final bool isInitialized;
 
-  /// Whether the camera is currently auto-rotating.
+  /// Ob die Kamera gerade automatisch rotiert.
   final bool autoRotate;
 
-  /// Speed of camera rotation.
+  /// Geschwindigkeit der Kamerarotation.
   final double rotationSpeed;
 
-  /// Direction of camera rotation.
+  /// Richtung der Kamerarotation.
   final RotationDirection rotationDirection;
 
-  /// Time after which auto-rotation should automatically stop.
+  /// Zeit, nach der die Auto-Rotation automatisch stoppen soll.
   final Duration? rotationStopAfter;
 
-  /// Whether camera zooming is enabled.
+  /// Ob Kamera-Zoom aktiviert ist.
   final bool enableZoom;
 
-  /// Maximum allowed zoom level.
+  /// Maximal erlaubter Zoom-Level.
   final double maxZoom;
 
-  /// Minimum allowed zoom level.
+  /// Minimal erlaubter Zoom-Level.
   final double minZoom;
 
-  /// Controls how sensitive pinch-to-zoom and scroll-wheel zoom are.
+  /// Steuert, wie empfindlich Pinch-to-Zoom und Mausrad-Zoom sind.
   ///
-  /// Range: 0.0 (fastest / most sensitive) to 1.0 (slowest / least sensitive).
-  /// Default is 0.5 (balanced).
+  /// Bereich: 0.0 (schnellste / empfindlichste) bis 1.0 (langsamste / unempfindlichste).
+  /// Standard ist 0.5 (ausgewogen).
   final double zoomSensitivity;
 
-  /// Whether the camera position (panning) is locked.
+  /// Ob die Kameraposition (Panning) gesperrt ist.
   final bool isPositionLocked;
 
-  /// Horizontal angle (Alpha) of the camera in radians.
+  /// Horizontaler Winkel (Alpha) der Kamera in Radiant.
   final double cameraAlpha;
 
-  /// Vertical angle (Beta) of the camera in radians.
+  /// Vertikaler Winkel (Beta) der Kamera in Radiant.
   final double cameraBeta;
 
-  /// Distance (Radius) of the camera from the target.
+  /// Distanz (Radius) der Kamera zum Ziel.
   final double cameraRadius;
 
-  /// Base64 encoded string of the last captured screenshot.
+  /// Base64-kodierter String des zuletzt aufgenommenen Screenshots.
   final String? lastScreenshot;
 
-  /// List of lights currently active in the scene.
+  /// Liste der aktuell aktiven Lichter in der Szene.
   final List<LightingConfig> lights;
 
-  /// Scene exposure level.
+  /// Exposure-Wert der Szene.
   final double exposure;
 
-  /// Scene contrast level.
+  /// Kontrastwert der Szene.
   final double contrast;
 
-  /// Current shading mode.
+  /// Aktueller Schattierungsmodus.
   final ShadingMode shadingMode;
 
-  /// Global material override applied to the entire model.
+  /// Globaler Material-Override für das gesamte Modell.
   final MaterialConfig? globalMaterial;
 
-  /// Configuration for the selection system.
+  /// Konfiguration des Auswahl-Systems.
   final SelectionConfig selectionConfig;
 
-  /// List of names of currently selected parts.
+  /// Liste der Namen aktuell ausgewählter Teile.
   final List<String> selectedParts;
 
-  /// List of names of all selectable parts in the model.
+  /// Liste der Namen aller auswählbaren Teile im Modell.
   final List<String> availableParts;
 
-  /// List of available animations in the model.
+  /// Liste der verfügbaren Animationen im Modell.
   final List<Power3DAnimation> animations;
 
-  /// Whether multiple animations can be played simultaneously.
+  /// Ob mehrere Animationen gleichzeitig abgespielt werden können.
   final bool playMultiple;
 
-  /// List of names of hidden parts.
+  /// Liste der Namen ausgeblendeter Teile.
   final List<String> hiddenParts;
 
-  /// List of names of parts with visible bounding boxes.
-  /// List of bounding boxes currently shown.
+  /// Liste der Namen von Teilen mit sichtbaren Bounding Boxes.
+  /// Liste der aktuell angezeigten Bounding Boxes.
   final List<String> boundingBoxParts;
 
-  /// Hierarchical structure of parts (JSON list of nodes).
+  /// Hierarchische Struktur der Teile (JSON-Liste von Knoten).
   final List<dynamic>? partsHierarchy;
 
-  /// List of available textures in the scene.
+  /// Liste der verfügbaren Texturen in der Szene.
   final List<Power3DTexture> textures;
 
-  /// JSON string representing the annotations.
+  /// JSON-String mit den Annotationen.
   final String? annotations;
 
-  /// Annotation style to use. Can be a predefined enum or a custom JS string.
+  /// Zu verwendender Annotationsstil. Kann ein vordefiniertes Enum oder ein eigener JS-String sein.
   final dynamic annotationStyle;
 
 
-  /// Creates a new [Power3DState].
+  /// Erstellt einen neuen [Power3DState].
   const Power3DState({
     this.isInitialized = false,
     this.status = Power3DStatus.initial,
@@ -446,10 +446,10 @@ class Power3DState {
     this.annotationStyle,
   });
 
-  /// Initial state representation.
+  /// Repräsentation des Initialzustands.
   factory Power3DState.initial() => const Power3DState();
 
-  /// Creates a copy of this state with the given fields replaced.
+  /// Erstellt eine Kopie dieses Zustands mit ersetzten Feldern.
   Power3DState copyWith({
     Power3DStatus? status,
     String? errorMessage,
@@ -523,39 +523,39 @@ class Power3DState {
   }
 }
 
-/// Metadata representing a texture in the 3D scene.
+/// Metadaten einer Textur in der 3D-Szene.
 class Power3DTexture {
-  /// Unique identifier for the texture.
+  /// Eindeutige Kennung der Textur.
   final String uniqueId;
 
-  /// Name of the texture or filename.
+  /// Name der Textur oder Dateiname.
   final String name;
 
-  /// The class name of the texture in Babylon.js.
+  /// Klassenname der Textur in Babylon.js.
   final String className;
 
-  /// Whether this is a render target texture.
+  /// Ob dies eine Render-Target-Textur ist.
   final bool isRenderTarget;
 
-  /// The brightness/intensity level of the texture.
+  /// Helligkeits-/Intensitätsstufe der Textur.
   final double level;
 
-  /// URL of the texture if available.
+  /// URL der Textur, falls vorhanden.
   final String? url;
 
-  /// Horizontal scale/tiling.
+  /// Horizontale Skalierung/Kachelung.
   final double uScale;
 
-  /// Vertical scale/tiling.
+  /// Vertikale Skalierung/Kachelung.
   final double vScale;
 
-  /// Horizontal offset.
+  /// Horizontaler Versatz.
   final double uOffset;
 
-  /// Vertical offset.
+  /// Vertikaler Versatz.
   final double vOffset;
 
-  /// Creates a new texture metadata object.
+  /// Erstellt ein neues Textur-Metadaten-Objekt.
   const Power3DTexture({
     required this.uniqueId,
     required this.name,
@@ -569,7 +569,7 @@ class Power3DTexture {
     this.vOffset = 0.0,
   });
 
-  /// Creates a [Power3DTexture] from a JSON map.
+  /// Erstellt eine [Power3DTexture] aus einer JSON-Map.
   factory Power3DTexture.fromJson(Map<String, dynamic> json) {
     return Power3DTexture(
       uniqueId: json['uniqueId'] ?? '',
@@ -586,24 +586,24 @@ class Power3DTexture {
   }
 }
 
-/// Request object to update texture properties.
+/// Anfrageobjekt zum Aktualisieren von Textureigenschaften.
 class TextureUpdate {
-  /// Optional brightness/intensity level.
+  /// Optionale Helligkeits-/Intensitätsstufe.
   final double? level;
 
-  /// Optional horizontal scale.
+  /// Optionale horizontale Skalierung.
   final double? uScale;
 
-  /// Optional vertical scale.
+  /// Optionale vertikale Skalierung.
   final double? vScale;
 
-  /// Optional horizontal offset.
+  /// Optionaler horizontaler Versatz.
   final double? uOffset;
 
-  /// Optional vertical offset.
+  /// Optionaler vertikaler Versatz.
   final double? vOffset;
 
-  /// Creates a texture update request.
+  /// Erstellt eine Textur-Update-Anfrage.
   const TextureUpdate({
     this.level,
     this.uScale,
@@ -612,7 +612,7 @@ class TextureUpdate {
     this.vOffset,
   });
 
-  /// Converts the update to a JSON map.
+  /// Wandelt das Update in eine JSON-Map um.
   Map<String, dynamic> toJson() {
     return {
       if (level != null) 'level': level,
@@ -624,27 +624,27 @@ class TextureUpdate {
   }
 }
 
-/// Configuration for a light source in the scene.
+/// Konfiguration für eine Lichtquelle in der Szene.
 class LightingConfig {
-  /// Type of light.
+  /// Lichttyp.
   final LightType type;
 
-  /// Intensity of the light (usually 0.0 to 1.0+).
+  /// Intensität des Lichts (üblicherweise 0.0 bis 1.0+).
   final double intensity;
 
-  /// Color of the light.
+  /// Farbe des Lichts.
   final Color color;
 
-  /// Direction of the light (for [LightType.directional]).
+  /// Richtung des Lichts (für [LightType.directional]).
   final math.Point<double>? direction;
 
-  /// Whether this light casts shadows.
+  /// Ob dieses Licht Schatten wirft.
   final bool castShadows;
 
-  /// Blur level for the shadows.
+  /// Unschärfegrad der Schatten.
   final double shadowBlur;
 
-  /// Creates a new lighting configuration.
+  /// Erstellt eine neue Beleuchtungskonfiguration.
   const LightingConfig({
     this.type = LightType.hemispheric,
     this.intensity = 0.7,
@@ -654,7 +654,7 @@ class LightingConfig {
     this.shadowBlur = 10.0,
   });
 
-  /// Creates a copy of this lighting configuration with the given fields replaced.
+  /// Erstellt eine Kopie dieser Beleuchtungskonfiguration mit ersetzten Feldern.
   LightingConfig copyWith({
     LightType? type,
     double? intensity,
@@ -674,21 +674,21 @@ class LightingConfig {
   }
 }
 
-/// Represents the state of an animation in the 3D model.
+/// Repräsentiert den Zustand einer Animation im 3D-Modell.
 class Power3DAnimation {
-  /// Name of the animation.
+  /// Name der Animation.
   final String name;
 
-  /// Whether the animation is currently playing.
+  /// Ob die Animation gerade abgespielt wird.
   final bool isPlaying;
 
-  /// Current playback speed.
+  /// Aktuelle Wiedergabegeschwindigkeit.
   final double speed;
 
-  /// Whether the animation is set to loop.
+  /// Ob die Animation in einer Schleife läuft.
   final bool loop;
 
-  /// Creates a new animation state object.
+  /// Erstellt ein neues Animationszustands-Objekt.
   const Power3DAnimation({
     required this.name,
     this.isPlaying = false,
@@ -696,7 +696,7 @@ class Power3DAnimation {
     this.loop = true,
   });
 
-  /// Creates a [Power3DAnimation] from a JSON map.
+  /// Erstellt eine [Power3DAnimation] aus einer JSON-Map.
   factory Power3DAnimation.fromJson(Map<String, dynamic> json) {
     return Power3DAnimation(
       name: json['name'] ?? '',
@@ -706,7 +706,7 @@ class Power3DAnimation {
     );
   }
 
-  /// Creates a copy of this animation state with the given fields replaced.
+  /// Erstellt eine Kopie dieses Animationszustands mit ersetzten Feldern.
   Power3DAnimation copyWith({
     String? name,
     bool? isPlaying,
@@ -721,4 +721,3 @@ class Power3DAnimation {
     );
   }
 }
-

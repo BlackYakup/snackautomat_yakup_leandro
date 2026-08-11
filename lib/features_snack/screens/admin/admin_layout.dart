@@ -4,6 +4,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_th
 enum AdminSection {
   coinInventory,
   productRefill,
+  slots,
   products,
 }
 
@@ -14,6 +15,8 @@ extension AdminSectionLabels on AdminSection {
         return 'Münzbestand';
       case AdminSection.productRefill:
         return 'Auffüllen';
+      case AdminSection.slots:
+        return 'Slots';
       case AdminSection.products:
         return 'Produkte';
     }
@@ -25,6 +28,8 @@ extension AdminSectionLabels on AdminSection {
         return Icons.toll_outlined;
       case AdminSection.productRefill:
         return Icons.inventory_2_outlined;
+      case AdminSection.slots:
+        return Icons.grid_view_outlined;
       case AdminSection.products:
         return Icons.fastfood_outlined;
     }
@@ -84,7 +89,7 @@ class AdminSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           ...AdminSection.values.map((section) {
             final isSelected = section == selectedSection;
 

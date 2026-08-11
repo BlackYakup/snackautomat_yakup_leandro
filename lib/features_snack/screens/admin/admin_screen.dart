@@ -4,6 +4,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_co
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_layout.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_product_refill_panel.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_products_panel.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_slots_panel.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_theme.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
@@ -22,25 +23,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       data: adminTheme(),
       child: Scaffold(
         backgroundColor: AdminColors.background,
-        body: Row(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AdminSidebar(
-              selectedSection: _selectedSection,
-              onSectionSelected: (section) {
-                setState(() => _selectedSection = section);
-              },
-            ),
+            AdminHeader(section: _selectedSection),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
                 children: [
-                  AdminHeader(section: _selectedSection),
+                  AdminSidebar(
+                    selectedSection: _selectedSection,
+                    onSectionSelected: (section) {
+                      setState(() => _selectedSection = section);
+                    },
+                  ),
                   Expanded(
                     child: switch (_selectedSection) {
                       AdminSection.coinInventory =>
                         const AdminCoinInventoryPanel(),
                       AdminSection.productRefill =>
                         const AdminProductRefillPanel(),
+                      AdminSection.slots => const AdminSlotsPanel(),
                       AdminSection.products => const AdminProductsPanel(),
                     },
                   ),

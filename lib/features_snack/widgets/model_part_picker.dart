@@ -65,7 +65,7 @@ class ModelPartPicker extends StatelessWidget {
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: parts.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final part = parts[index];
                 final isSelected = part == activePart;

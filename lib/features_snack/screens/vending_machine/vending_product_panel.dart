@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:snackautomat_yakup_leandro/features_snack/models/product/product.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/models/product/placed_product.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/models/product/product_visual.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/providers/provider.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/double_slot_layout.dart';
 
 class VendingProductPanel extends ConsumerWidget {
   const VendingProductPanel({super.key});
@@ -11,7 +12,7 @@ class VendingProductPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final productsAsync = ref.watch(productControllerProvider);
+    final productsAsync = ref.watch(placedProductsProvider);
     final selectedProduct = ref.watch(
       vendingSessionProvider.select((session) => session.selectedProduct),
     );
@@ -46,8 +47,8 @@ class _ProductArea extends StatelessWidget {
     required this.selectedProduct,
   });
 
-  final List<Product> products;
-  final Product? selectedProduct;
+  final List<PlacedProduct> products;
+  final PlacedProduct? selectedProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +90,8 @@ class _ProductRow extends StatelessWidget {
   });
 
   final String rowLabel;
-  final List<Product> products;
-  final Product? selectedProduct;
+  final List<PlacedProduct> products;
+  final PlacedProduct? selectedProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +139,7 @@ class _ProductRow extends StatelessWidget {
     );
   }
 
-  Product? _productStartingAt(String rowLabel, int columnNumber) {
+  PlacedProduct? _productStartingAt(String rowLabel, int columnNumber) {
     for (final product in products) {
       if (product.rowLabel.toUpperCase() == rowLabel &&
           product.columnNumber == columnNumber) {
@@ -149,13 +150,13 @@ class _ProductRow extends StatelessWidget {
     return null;
   }
 
-  bool _isSameProduct(Product product, Product? selectedProduct) {
+  bool _isSameProduct(PlacedProduct product, PlacedProduct? selectedProduct) {
     if (selectedProduct == null) {
       return false;
     }
 
-    if (product.id != null && selectedProduct.id != null) {
-      return product.id == selectedProduct.id;
+    if (product.slotId != null && selectedProduct.slotId != null) {
+      return product.slotId == selectedProduct.slotId;
     }
 
     return product.rowLabel == selectedProduct.rowLabel &&
@@ -169,7 +170,7 @@ class _ProductTile extends StatelessWidget {
     required this.isSelected,
   });
 
-  final Product product;
+  final PlacedProduct product;
   final bool isSelected;
 
   @override
@@ -203,10 +204,13 @@ class _ProductTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ProductVisualAvatar(product: product, size: 28),
+                    ProductVisualAvatar(product: product.product, size: 28),
                     const SizedBox(height: 4),
                     Text(
-                      '${product.rowLabel}${product.columnNumber}',
+                      displaySlotCode(
+                        rowLabel: product.rowLabel,
+                        columnNumber: product.columnNumber,
+                      ),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,

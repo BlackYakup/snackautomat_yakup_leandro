@@ -6,8 +6,9 @@ import 'package:snackautomat_yakup_leandro/features_snack/screens/admin/admin_wi
 import 'package:snackautomat_yakup_leandro/features_snack/services/local_file_cache.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/obj_model_parser.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/services/power3d_bootstrap.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/services/product_catalog_assets.dart';
 
-/// Einzelner 3D-Viewer – maximal eine Instanz gleichzeitig in der App.
+/// Einzelne 3D-Ansicht – maximal eine Instanz gleichzeitig in der App.
 class ProductModelPreview extends StatefulWidget {
   const ProductModelPreview({
     required this.modelPath,
@@ -51,7 +52,17 @@ class _ProductModelPreviewState extends State<ProductModelPreview> {
         return;
       }
 
-      if (!ProductModelViewerLock.tryAcquire()) {
+      // Kurz erneut versuchen: Sperre kann noch vom vorherigen Dialog/Automaten freigegeben werden.
+      var acquired = ProductModelViewerLock.tryAcquire();
+      if (!acquired) {
+        for (var i = 0; i < 8 && !acquired; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+          if (!mounted) return;
+          acquired = ProductModelViewerLock.tryAcquire();
+        }
+      }
+
+      if (!acquired) {
         setState(() => _blocked = true);
         return;
       }
@@ -110,7 +121,11 @@ class _ProductModelPreviewState extends State<ProductModelPreview> {
     super.dispose();
   }
 
-  String get _normalizedPath => p.normalize(widget.modelPath);
+  String get _normalizedPath => isBundleAssetPath(widget.modelPath)
+      ? widget.modelPath.replaceAll('\\', '/')
+      : p.normalize(widget.modelPath);
+
+  bool get _isAssetModel => isBundleAssetPath(widget.modelPath);
 
   Future<void> _handleModelLoaded() async {
     if (!mounted || _controller == null || _partsLoaded) {
@@ -203,7 +218,7 @@ class _ProductModelPreviewState extends State<ProductModelPreview> {
 
   @override
   Widget build(BuildContext context) {
-    if (!LocalFileCache.exists(_normalizedPath)) {
+    if (!_isAssetModel && !LocalFileCache.exists(_normalizedPath)) {
       return _ModelFallback(
         size: widget.size,
         missingFile: true,
@@ -222,7 +237,7 @@ class _ProductModelPreviewState extends State<ProductModelPreview> {
     if (_blocked) {
       return _ModelFallback(
         size: widget.size,
-        message: '3D-Vorschau bereits aktiv',
+        message: '3D-Viewer belegt\n(Automat noch aktiv)',
       );
     }
 
@@ -234,52 +249,72 @@ class _ProductModelPreviewState extends State<ProductModelPreview> {
       );
     }
 
+    Widget loadingUi(BuildContext context, Power3DController controller) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AdminColors.accent,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '3D-Modell wird geladen...',
+              style: TextStyle(
+                color: AdminColors.textMuted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final errorWidget = _ModelFallback(
+      size: widget.size,
+      missingFile: true,
+      message: 'Laden fehlgeschlagen',
+    );
+
+    final viewer = _isAssetModel
+        ? Power3D.fromAsset(
+            _normalizedPath,
+            key: ValueKey('$_normalizedPath|${widget.selectedPart ?? ''}'),
+            controller: _controller,
+            lazy: false,
+            fileName: p.basename(_normalizedPath),
+            onModelLoaded: _handleModelLoaded,
+            onMessage: (message) {
+              debugPrint('ProductModelPreview: $message');
+            },
+            loadingUi: loadingUi,
+            errorWidget: errorWidget,
+          )
+        : Power3D.fromFile(
+            _normalizedPath,
+            key: ValueKey('$_normalizedPath|${widget.selectedPart ?? ''}'),
+            controller: _controller,
+            lazy: false,
+            fileName: p.basename(_normalizedPath),
+            onModelLoaded: _handleModelLoaded,
+            onMessage: (message) {
+              debugPrint('ProductModelPreview: $message');
+            },
+            loadingUi: loadingUi,
+            errorWidget: errorWidget,
+          );
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         width: widget.size,
         height: widget.size,
-        child: Power3D.fromFile(
-          _normalizedPath,
-          key: ValueKey('$_normalizedPath|${widget.selectedPart ?? ''}'),
-          controller: _controller,
-          lazy: false,
-          fileName: p.basename(_normalizedPath),
-          onModelLoaded: _handleModelLoaded,
-          onMessage: (message) {
-            debugPrint('ProductModelPreview: $message');
-          },
-          loadingUi: (context, controller) {
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AdminColors.accent,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    '3D-Modell wird geladen...',
-                    style: TextStyle(
-                      color: AdminColors.textMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-          errorWidget: _ModelFallback(
-            size: widget.size,
-            missingFile: true,
-            message: 'Laden fehlgeschlagen',
-          ),
-        ),
+        child: viewer,
       ),
     );
   }
@@ -357,7 +392,7 @@ class _ModelFallback extends StatelessWidget {
   }
 }
 
-/// Badge für Karten/Slots – kein WebView, nur Hinweis dass ein 3D-Modell existiert.
+/// Kennzeichnung für Karten/Slots – kein WebView, nur Hinweis dass ein 3D-Modell existiert.
 class ProductModelBadge extends StatelessWidget {
   const ProductModelBadge({
     required this.size,
@@ -401,7 +436,7 @@ class ProductModelBadge extends StatelessWidget {
   }
 }
 
-/// Vollbild-3D-Vorschau in eigenem Dialog (nur ein Viewer).
+/// Vollbild-3D-Vorschau in eigenem Dialog (nur eine Ansicht).
 Future<void> showProductModelPreviewDialog({
   required BuildContext context,
   required String modelPath,
@@ -456,7 +491,7 @@ Future<void> showProductModelPreviewDialog({
                         child: ListView.separated(
                           shrinkWrap: true,
                           itemCount: parts.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final part = parts[index];

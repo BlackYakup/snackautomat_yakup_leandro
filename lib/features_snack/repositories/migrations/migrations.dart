@@ -8,6 +8,7 @@ import 'package:snackautomat_yakup_leandro/features_snack/repositories/migration
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_007_coin_state_fields.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_008_coin_earned_surplus.dart';
 import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_009_coin_own_quantity.dart';
+import 'package:snackautomat_yakup_leandro/features_snack/repositories/migrations/migration_010_product_slot_normalization.dart';
 import 'package:sqflite/sqflite.dart';
 
 final List<Migration> allMigrations = <Migration>[
@@ -20,6 +21,7 @@ final List<Migration> allMigrations = <Migration>[
   const Migration007CoinStateFields(),
   const Migration008CoinEarnedSurplus(),
   const Migration009CoinOwnQuantity(),
+  const Migration010ProductSlotNormalization(),
 ]..sort((a, b) => a.version.compareTo(b.version));
 
 int get currentDatabaseVersion => allMigrations.last.version;
